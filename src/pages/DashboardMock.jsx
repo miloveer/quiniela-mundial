@@ -25,6 +25,7 @@ import StageStatsBanner from '../components/StageStatsBanner';
 import StageRankingPreviewCard from '../components/StageRankingPreviewCard';
 
 import { getUsersProfilesByIds } from '../services/userService';
+import { syncFootballDataMatches } from '../services/footballDataSyncService';
 
 import {
   createLeague,
@@ -596,15 +597,47 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   }
 
   async function handleLoadBaseSchedule() {
-    if (!isLeagueOwner) {
-      alert('Solo el administrador puede cargar partidos.');
+  if (!isLeagueOwner) {
+    alert('Solo el administrador puede cargar partidos.');
+    return;
+  }
+
+  if (!activeLeagueId || activeLeagueId === 'default') {
+    alert('Primero selecciona o crea una liga.');
+    return;
+  }
+
+  try {
+    const result = await syncFootballDataMatches({
+      leagueId: activeLeagueId,
+    });
+
+    await loadLeagueMatches();
+    await loadLeaguePredictions();
+
+    if (result.total === 0) {
+      alert(
+        'La API respondió correctamente, pero aún no encontró partidos 2026. Se cargará el calendario base.'
+      );
+
+      await seedLeagueMatches({
+        leagueId: activeLeagueId,
+        matches: cleanBaseMatches(matches),
+      });
+
+      await loadLeagueMatches();
+      await loadLeaguePredictions();
+
       return;
     }
 
-    if (!activeLeagueId || activeLeagueId === 'default') {
-      alert('Primero selecciona o crea una liga.');
-      return;
-    }
+    alert(`Partidos sincronizados correctamente: ${result.total}`);
+  } catch (error) {
+    console.error('Error sincronizando football-data:', error);
+
+    alert(
+      'No se pudieron sincronizar los partidos desde la API. Se cargará el calendario base.'
+    );
 
     try {
       await seedLeagueMatches({
@@ -615,14 +648,13 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       await loadLeagueMatches();
       await loadLeaguePredictions();
 
-      alert('Partidos del Mundial cargados correctamente.');
-    } catch (error) {
-      console.error('Error cargando calendario base:', error);
-      alert(
-        'No se pudieron cargar los partidos del Mundial. Intenta nuevamente.'
-      );
+      alert('Partidos base cargados correctamente.');
+    } catch (fallbackError) {
+      console.error('Error cargando calendario base:', fallbackError);
+      alert('No se pudieron cargar los partidos. Intenta nuevamente.');
     }
   }
+}
 
   async function handleSavePrizes(prizesToSave) {
     if (!isLeagueOwner) {
