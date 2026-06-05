@@ -86,13 +86,49 @@ import {
   sortMatchesByStatusAndDate,
 } from '../utils/matchUtils';
 
-
 function cleanBaseMatches(matches = []) {
   return matches.map((match) => ({
     ...match,
     userPrediction: null,
     result: null,
   }));
+}
+
+function EmptyLeagueState({ onJoinLeague, onCreateLeague }) {
+  return (
+    <section className="rounded-[1.5rem] border border-dashed border-slate-300 bg-white/80 p-5 text-center shadow-sm">
+      <p className="text-sm font-bold text-emerald-700">
+        Empieza tu quiniela
+      </p>
+
+      <h2 className="mt-1 text-2xl font-black text-slate-950">
+        Aún no estás en una liga
+      </h2>
+
+      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+        Únete con un código de invitación o crea una liga para comenzar a cargar
+        partidos, pronósticos y ranking.
+      </p>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={onJoinLeague}
+          className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800"
+        >
+          Unirme a liga
+        </button>
+
+        <button
+          type="button"
+          onClick={onCreateLeague}
+          className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-700"
+        >
+          Crear liga
+        </button>
+      </div>
+    </section>
+  );
 }
 
 function DashboardMock({ user, onLogout, onUpdateUser }) {
@@ -120,6 +156,9 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   const [leagueMembers, setLeagueMembers] = useState([]);
 
   const activeLeagueId = user?.activeLeagueId || user?.leagueCode || 'default';
+  const hasActiveLeague = Boolean(
+    user?.leagueCode && activeLeagueId !== 'default'
+  );
   const matchesStorageKey = getLeagueMatchesStorageKey(activeLeagueId);
 
   const safeUserLeagues = Array.isArray(userLeagues) ? userLeagues : [];
@@ -141,18 +180,23 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       : activeLeagueMemberIds.length;
 
   const [matchesByLeague, setMatchesByLeague] = useState(() => ({
-    [activeLeagueId]: getStorageItem(matchesStorageKey, cleanBaseMatches(initialMatches)),
+    [activeLeagueId]: getStorageItem(
+      matchesStorageKey,
+      cleanBaseMatches(initialMatches)
+    ),
   }));
 
   const matches =
     matchesByLeague[activeLeagueId] ??
     getStorageItem(matchesStorageKey, cleanBaseMatches(initialMatches));
 
+  const visibleMatches = hasActiveLeague ? matches : [];
+
   const activeStage = stages.find((stage) => stage.id === activeStageId);
 
   const stageMatches = useMemo(() => {
-    return getStageMatches(matches, activeStageId);
-  }, [matches, activeStageId]);
+    return getStageMatches(visibleMatches, activeStageId);
+  }, [visibleMatches, activeStageId]);
 
   const filteredStageMatches = useMemo(() => {
     const filteredMatches = filterMatchesByStatus(
@@ -165,14 +209,14 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
   const matchFilterCounts = getMatchFilterCounts(stageMatches);
 
-  const completedPredictions = getCompletedPredictions(matches);
-  const pendingMatches = getPendingMatches(matches);
+  const completedPredictions = getCompletedPredictions(visibleMatches);
+  const pendingMatches = getPendingMatches(visibleMatches);
   const pendingMatchesList = sortMatchesByStatusAndDate(
-    getPendingMatchesList(matches)
+    getPendingMatchesList(visibleMatches)
   );
-  const totalPoints = calculateTotalPoints(matches);
-  const exactScores = calculateExactScores(matches);
-  const resultHits = calculateResultHits(matches);
+  const totalPoints = calculateTotalPoints(visibleMatches);
+  const exactScores = calculateExactScores(visibleMatches);
+  const resultHits = calculateResultHits(visibleMatches);
 
   const currentUserName = user?.displayName || 'Invitado';
 
@@ -181,7 +225,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     uid: user?.uid || 'current-user',
     name: currentUserName,
     badge: 'Tú',
-    predictions: matches.reduce((accumulator, match) => {
+    predictions: visibleMatches.reduce((accumulator, match) => {
       if (!match.userPrediction) {
         return accumulator;
       }
@@ -209,17 +253,19 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
   const firestoreRanking = buildRankingFromPredictions({
     predictions: memberPredictions,
-    matches,
+    matches: visibleMatches,
     currentUser: user,
     userProfiles,
   });
 
-  const fallbackRanking = buildRanking(rankingUsers, matches);
+  const fallbackRanking = buildRanking(rankingUsers, visibleMatches);
 
   const ranking =
-    activeLeagueId !== 'default' && firestoreRanking.length > 0
+    hasActiveLeague && firestoreRanking.length > 0
       ? firestoreRanking
-      : fallbackRanking;
+      : hasActiveLeague
+        ? fallbackRanking
+        : [];
 
   const firestoreComparisonUsers = buildUsersFromPredictions({
     predictions: memberPredictions,
@@ -228,12 +274,14 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   });
 
   const comparisonUsers =
-    activeLeagueId !== 'default' && firestoreComparisonUsers.length > 0
+    hasActiveLeague && firestoreComparisonUsers.length > 0
       ? firestoreComparisonUsers
-      : rankingUsers;
+      : hasActiveLeague
+        ? rankingUsers
+        : [];
 
   const leagueAdminUsers =
-    activeLeagueId !== 'default' && userProfiles.length > 0
+    hasActiveLeague && userProfiles.length > 0
       ? userProfiles.map((profile) => {
           const profileId = profile.uid || profile.id;
 
@@ -264,14 +312,16 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   const currentUserPosition = getUserRankingPosition(ranking, currentUserName);
 
   const stageRanking =
-    activeLeagueId !== 'default' && firestoreRanking.length > 0
+    hasActiveLeague && firestoreRanking.length > 0
       ? buildRankingFromPredictions({
           predictions: memberPredictions,
-          matches: getStageMatches(matches, activeStageId),
+          matches: getStageMatches(visibleMatches, activeStageId),
           currentUser: user,
           userProfiles,
         })
-      : buildStageRanking(rankingUsers, matches, activeStageId);
+      : hasActiveLeague
+        ? buildStageRanking(rankingUsers, visibleMatches, activeStageId)
+        : [];
 
   function handleChangeSection(sectionId) {
     if (sectionId === 'admin' && !isLeagueOwner) {
@@ -398,7 +448,10 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
   async function loadLeagueMatches() {
     if (!activeLeagueId || activeLeagueId === 'default') {
-      const localMatches = getStorageItem(matchesStorageKey, cleanBaseMatches(initialMatches));
+      const localMatches = getStorageItem(
+        matchesStorageKey,
+        cleanBaseMatches(initialMatches)
+      );
 
       setMatchesByLeague((prevMatchesByLeague) => ({
         ...prevMatchesByLeague,
@@ -435,7 +488,11 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
         return;
       }
 
-      const localMatches = getStorageItem(matchesStorageKey, cleanBaseMatches(initialMatches));
+      const localMatches = getStorageItem(
+        matchesStorageKey,
+        cleanBaseMatches(initialMatches)
+      );
+
       const localMatchesWithPredictions = applyUserPredictionsToMatches(
         localMatches,
         userPredictions
@@ -448,7 +505,10 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     } catch (error) {
       console.error('Error cargando partidos desde Firestore:', error);
 
-      const localMatches = getStorageItem(matchesStorageKey, cleanBaseMatches(initialMatches));
+      const localMatches = getStorageItem(
+        matchesStorageKey,
+        cleanBaseMatches(initialMatches)
+      );
 
       setMatchesByLeague((prevMatchesByLeague) => ({
         ...prevMatchesByLeague,
@@ -549,7 +609,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     try {
       await seedLeagueMatches({
         leagueId: activeLeagueId,
-        matches,
+        matches: cleanBaseMatches(matches),
       });
 
       await loadLeagueMatches();
@@ -558,7 +618,9 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       alert('Partidos del Mundial cargados correctamente.');
     } catch (error) {
       console.error('Error cargando calendario base:', error);
-      alert('No se pudieron cargar los partidos del Mundial. Intenta nuevamente.');
+      alert(
+        'No se pudieron cargar los partidos del Mundial. Intenta nuevamente.'
+      );
     }
   }
 
@@ -631,6 +693,11 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       return;
     }
 
+    if (!hasActiveLeague) {
+      alert('Primero debes unirte a una liga.');
+      return;
+    }
+
     setMatchesByLeague((prevMatchesByLeague) => {
       const currentMatches =
         prevMatchesByLeague[activeLeagueId] ??
@@ -655,10 +722,6 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       };
     });
 
-    if (!activeLeagueId || activeLeagueId === 'default') {
-      return;
-    }
-
     try {
       await savePrediction({
         leagueId: activeLeagueId,
@@ -671,7 +734,9 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       await loadUserProfiles();
     } catch (error) {
       console.error('Error guardando predicción en Firestore:', error);
-      alert('Tu pronóstico no pudo sincronizarse correctamente. Intenta nuevamente.');
+      alert(
+        'Tu pronóstico no pudo sincronizarse correctamente. Intenta nuevamente.'
+      );
     }
   }
 
@@ -720,7 +785,9 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       await loadLeaguePredictions();
     } catch (error) {
       console.error('Error guardando resultado en Firestore:', error);
-      alert('El resultado no pudo sincronizarse correctamente. Intenta nuevamente.');
+      alert(
+        'El resultado no pudo sincronizarse correctamente. Intenta nuevamente.'
+      );
     }
   }
 
@@ -805,24 +872,35 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                   </p>
                 </div>
 
-                <div className="w-fit rounded-2xl bg-emerald-600 px-4 py-3 text-white sm:w-auto">
-                  <p className="text-xs font-bold uppercase tracking-widest text-emerald-100">
-                    Puntos
-                  </p>
+                {hasActiveLeague && (
+                  <div className="w-fit rounded-2xl bg-emerald-600 px-4 py-3 text-white sm:w-auto">
+                    <p className="text-xs font-bold uppercase tracking-widest text-emerald-100">
+                      Puntos
+                    </p>
 
-                  <p className="text-2xl font-black">{totalPoints}</p>
-                </div>
+                    <p className="text-2xl font-black">{totalPoints}</p>
+                  </div>
+                )}
               </div>
             </section>
 
-            <DashboardSummary
-              completed={completedPredictions}
-              pending={pendingMatches}
-              position={currentUserPosition}
-              totalPoints={totalPoints}
-              exactScores={exactScores}
-              resultHits={resultHits}
-            />
+            {!hasActiveLeague && (
+              <EmptyLeagueState
+                onJoinLeague={() => setIsJoinLeagueModalOpen(true)}
+                onCreateLeague={() => setIsCreateLeagueModalOpen(true)}
+              />
+            )}
+
+            {hasActiveLeague && (
+              <DashboardSummary
+                completed={completedPredictions}
+                pending={pendingMatches}
+                position={currentUserPosition}
+                totalPoints={totalPoints}
+                exactScores={exactScores}
+                resultHits={resultHits}
+              />
+            )}
 
             <section className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-5">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -889,8 +967,8 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
               </div>
             </section>
 
-            <div className="grid gap-3 md:gap-4 lg:grid-cols-2">
-              {user?.leagueCode && (
+            {hasActiveLeague && (
+              <div className="grid gap-3 md:gap-4 lg:grid-cols-2">
                 <PrizePreviewCard
                   prizes={leaguePrizes}
                   participantCount={totalLeagueMembers}
@@ -899,182 +977,232 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                   ranking={ranking}
                   onOpenPrizes={() => setActiveSection('prizes')}
                 />
-              )}
 
-              <PendingMatchesCard
-                pendingMatches={pendingMatchesList}
-                onSelectStage={(stageId) => {
-                  setActiveStageId(stageId);
-                  setActiveSection('matches');
-                }}
-              />
-              <StageProgressCard
-                stages={stages}
-                matches={matches}
-                onSelectStage={(stageId) => {
-                  setActiveStageId(stageId);
-                  setActiveSection('matches');
-                }}
+                <PendingMatchesCard
+                  pendingMatches={pendingMatchesList}
+                  onSelectStage={(stageId) => {
+                    setActiveStageId(stageId);
+                    setActiveSection('matches');
+                  }}
                 />
-              <StageRankingPreviewCard
-                stages={stages}
-                matches={matches}
-                rankingUsers={rankingUsers}
-                memberPredictions={memberPredictions}
-                currentUser={user}
-                userProfiles={userProfiles}
-                activeLeagueId={activeLeagueId}
-                onSelectStage={(stageId) => {
-                  setActiveStageId(stageId);
-                  setActiveSection('ranking');
-                }}
-/>
 
-              <UserLeaguesCard
-                leagues={userLeagues}
-                activeLeagueId={user?.activeLeagueId}
-                isLoading={isLoadingLeagues}
-                onRefresh={loadUserLeagues}
-                onSelectLeague={handleSelectLeague}
-              />
+                <StageProgressCard
+                  stages={stages}
+                  matches={visibleMatches}
+                  onSelectStage={(stageId) => {
+                    setActiveStageId(stageId);
+                    setActiveSection('matches');
+                  }}
+                />
 
-              <RankingCard
-                ranking={ranking}
-                currentUserName={currentUserName}
-                title="Ranking general"
-                subtitle="Tabla acumulada"
-              />
-            </div>
+                <StageRankingPreviewCard
+                  stages={stages}
+                  matches={visibleMatches}
+                  rankingUsers={rankingUsers}
+                  memberPredictions={memberPredictions}
+                  currentUser={user}
+                  userProfiles={userProfiles}
+                  activeLeagueId={activeLeagueId}
+                  onSelectStage={(stageId) => {
+                    setActiveStageId(stageId);
+                    setActiveSection('ranking');
+                  }}
+                />
+
+                <UserLeaguesCard
+                  leagues={userLeagues}
+                  activeLeagueId={user?.activeLeagueId}
+                  isLoading={isLoadingLeagues}
+                  onRefresh={loadUserLeagues}
+                  onSelectLeague={handleSelectLeague}
+                />
+
+                <RankingCard
+                  ranking={ranking}
+                  currentUserName={currentUserName}
+                  title="Ranking general"
+                  subtitle="Tabla acumulada"
+                />
+              </div>
+            )}
           </div>
         )}
 
         {activeSection === 'matches' && (
-          <section className="space-y-4">
-            <div className="rounded-[2rem] border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
-              <div className="mb-4">
-                <p className="text-sm font-bold text-emerald-700">
-                  Navegación por etapas
-                </p>
-
-                <h2 className="text-2xl font-black text-slate-950">
-                  {activeStage?.fullName}
-                </h2>
-              </div>
-
-              <StageTabs
-                stages={stages}
-                activeStageId={activeStageId}
-                onChangeStage={setActiveStageId}
+          <>
+            {!hasActiveLeague ? (
+              <EmptyLeagueState
+                onJoinLeague={() => setIsJoinLeagueModalOpen(true)}
+                onCreateLeague={() => setIsCreateLeagueModalOpen(true)}
               />
-            </div>
-            <StageStatsBanner
-              stage={activeStage}
-              matches={stageMatches}
-            />
+            ) : (
+              <section className="space-y-4">
+                <div className="rounded-[2rem] border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
+                  <div className="mb-4">
+                    <p className="text-sm font-bold text-emerald-700">
+                      Navegación por etapas
+                    </p>
 
-            <div className="rounded-[2rem] border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
-              <div className="mb-4">
-                <p className="text-sm font-bold text-emerald-700">
-                  Filtros rápidos
-                </p>
+                    <h2 className="text-2xl font-black text-slate-950">
+                      {activeStage?.fullName}
+                    </h2>
+                  </div>
 
-                <h2 className="text-2xl font-black text-slate-950">
-                  Estado de pronósticos
-                </h2>
-              </div>
-
-              <MatchFilters
-                activeFilter={activeMatchFilter}
-                onChangeFilter={setActiveMatchFilter}
-                counts={matchFilterCounts}
-              />
-            </div>
-
-            {isLoadingMatches && (
-              <section className="rounded-[2rem] border border-slate-200 bg-white/80 p-5 text-center shadow-sm">
-                <p className="text-sm font-black text-emerald-700">
-                  Cargando partidos de la liga...
-                </p>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  Prepaarando la información de tu liga.
-                </p>
-              </section>
-            )}
-
-            <section className="grid gap-3 md:grid-cols-2">
-              {!isLoadingMatches &&
-                filteredStageMatches.map((match) => (
-                  <MatchCard
-                    key={match.id}
-                    match={match}
-                    onSavePrediction={handleSavePrediction}
+                  <StageTabs
+                    stages={stages}
+                    activeStageId={activeStageId}
+                    onChangeStage={setActiveStageId}
                   />
-                ))}
-            </section>
+                </div>
 
-            {!isLoadingMatches && filteredStageMatches.length === 0 && (
-              <section className="rounded-[2rem] border border-dashed border-slate-300 bg-white/70 p-6 text-center">
-                <p className="text-lg font-black text-slate-950">
-                  No hay partidos en este filtro
-                </p>
+                <StageStatsBanner stage={activeStage} matches={stageMatches} />
 
-                <p className="mt-2 text-sm leading-6 text-slate-500">
-                  Cambia el filtro o selecciona otra etapa.
-                </p>
+                <div className="rounded-[2rem] border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
+                  <div className="mb-4">
+                    <p className="text-sm font-bold text-emerald-700">
+                      Filtros rápidos
+                    </p>
+
+                    <h2 className="text-2xl font-black text-slate-950">
+                      Estado de pronósticos
+                    </h2>
+                  </div>
+
+                  <MatchFilters
+                    activeFilter={activeMatchFilter}
+                    onChangeFilter={setActiveMatchFilter}
+                    counts={matchFilterCounts}
+                  />
+                </div>
+
+                {isLoadingMatches && (
+                  <section className="rounded-[2rem] border border-slate-200 bg-white/80 p-5 text-center shadow-sm">
+                    <p className="text-sm font-black text-emerald-700">
+                      Cargando partidos de la liga...
+                    </p>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      Preparando la información de tu liga.
+                    </p>
+                  </section>
+                )}
+
+                <section className="grid gap-3 md:grid-cols-2">
+                  {!isLoadingMatches &&
+                    filteredStageMatches.map((match) => (
+                      <MatchCard
+                        key={match.id}
+                        match={match}
+                        onSavePrediction={handleSavePrediction}
+                      />
+                    ))}
+                </section>
+
+                {!isLoadingMatches && filteredStageMatches.length === 0 && (
+                  <section className="rounded-[2rem] border border-dashed border-slate-300 bg-white/70 p-6 text-center">
+                    <p className="text-lg font-black text-slate-950">
+                      No hay partidos en este filtro
+                    </p>
+
+                    <p className="mt-2 text-sm leading-6 text-slate-500">
+                      Cambia el filtro o selecciona otra etapa.
+                    </p>
+                  </section>
+                )}
               </section>
             )}
-          </section>
+          </>
         )}
 
         {activeSection === 'ranking' && (
-          <section className="grid gap-4 lg:grid-cols-2">
-            <RankingCard
-              ranking={ranking}
-              currentUserName={currentUserName}
-              title="Ranking general"
-              subtitle="Tabla acumulada"
-            />
+          <>
+            {!hasActiveLeague ? (
+              <EmptyLeagueState
+                onJoinLeague={() => setIsJoinLeagueModalOpen(true)}
+                onCreateLeague={() => setIsCreateLeagueModalOpen(true)}
+              />
+            ) : (
+              <section className="grid gap-4 lg:grid-cols-2">
+                <RankingCard
+                  ranking={ranking}
+                  currentUserName={currentUserName}
+                  title="Ranking general"
+                  subtitle="Tabla acumulada"
+                />
 
-            <RankingCard
-              ranking={stageRanking}
-              currentUserName={currentUserName}
-              title={`Ranking ${activeStage?.label}`}
-              subtitle={activeStage?.fullName}
-            />
-          </section>
+                <RankingCard
+                  ranking={stageRanking}
+                  currentUserName={currentUserName}
+                  title={`Ranking ${activeStage?.label}`}
+                  subtitle={activeStage?.fullName}
+                />
+              </section>
+            )}
+          </>
         )}
 
         {activeSection === 'history' && (
-          <PredictionHistoryCard matches={matches} />
+          <>
+            {!hasActiveLeague ? (
+              <EmptyLeagueState
+                onJoinLeague={() => setIsJoinLeagueModalOpen(true)}
+                onCreateLeague={() => setIsCreateLeagueModalOpen(true)}
+              />
+            ) : (
+              <PredictionHistoryCard matches={visibleMatches} />
+            )}
+          </>
         )}
 
         {activeSection === 'compare' && (
-          <UserComparisonCard users={comparisonUsers} matches={matches} />
+          <>
+            {!hasActiveLeague ? (
+              <EmptyLeagueState
+                onJoinLeague={() => setIsJoinLeagueModalOpen(true)}
+                onCreateLeague={() => setIsCreateLeagueModalOpen(true)}
+              />
+            ) : (
+              <UserComparisonCard
+                users={comparisonUsers}
+                matches={visibleMatches}
+              />
+            )}
+          </>
         )}
 
         {activeSection === 'prizes' && (
-          <div className="space-y-4">
-            {isLoadingPrizes && (
-              <section className="rounded-[2rem] border border-slate-200 bg-white/80 p-5 text-center shadow-sm">
-                <p className="text-sm font-black text-emerald-700">
-                  Cargando premios de la liga...
-                </p>
+          <>
+            {!hasActiveLeague ? (
+              <EmptyLeagueState
+                onJoinLeague={() => setIsJoinLeagueModalOpen(true)}
+                onCreateLeague={() => setIsCreateLeagueModalOpen(true)}
+              />
+            ) : (
+              <div className="space-y-4">
+                {isLoadingPrizes && (
+                  <section className="rounded-[2rem] border border-slate-200 bg-white/80 p-5 text-center shadow-sm">
+                    <p className="text-sm font-black text-emerald-700">
+                      Cargando premios de la liga...
+                    </p>
 
-                <p className="mt-1 text-sm text-slate-500">
-                  Cargando la información de premios para esta liga.
-                </p>
-              </section>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Cargando la información de premios para esta liga.
+                    </p>
+                  </section>
+                )}
+
+                <PrizesCard
+                  prizes={leaguePrizes}
+                  participantCount={totalLeagueMembers}
+                  entryFee={activeLeague?.entryFee || 200}
+                  useDynamicPrize={
+                    activeLeague?.prizeMode === 'winner_takes_all'
+                  }
+                  ranking={ranking}
+                />
+              </div>
             )}
-
-            <PrizesCard
-              prizes={leaguePrizes}
-              participantCount={totalLeagueMembers}
-              entryFee={activeLeague?.entryFee || 200}
-              useDynamicPrize={activeLeague?.prizeMode === 'winner_takes_all'}
-              ranking={ranking}
-            />
-          </div>
+          </>
         )}
 
         {activeSection === 'admin' && isLeagueOwner && (
@@ -1096,7 +1224,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
             <AdminPanelCard
               users={leagueAdminUsers}
-              matches={matches}
+              matches={visibleMatches}
               members={safeLeagueMembers}
               entryFee={activeLeague?.entryFee || 0}
               prizeMode={activeLeague?.prizeMode || 'fixed'}
@@ -1134,32 +1262,36 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
           </section>
         )}
 
-        <section className="mt-4 rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-5">
-          <p className="text-sm font-bold text-emerald-700">Reglas rápidas</p>
-
-          <h2 className="mt-1 text-xl font-black text-slate-950 sm:text-2xl">
-            Puntuación
-          </h2>
-
-          <div className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
-            <p>
-              <strong className="text-slate-950">+1 punto</strong> si aciertas
-              ganador o empate.
+        {hasActiveLeague && (
+          <section className="mt-4 rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-5">
+            <p className="text-sm font-bold text-emerald-700">
+              Reglas rápidas
             </p>
 
-            <p>
-              <strong className="text-slate-950">+2 puntos extra</strong> si
-              aciertas marcador exacto.
-            </p>
+            <h2 className="mt-1 text-xl font-black text-slate-950 sm:text-2xl">
+              Puntuación
+            </h2>
 
-            <p>
-              <strong className="text-slate-950">3 puntos total</strong> por
-              marcador exacto.
-            </p>
+            <div className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
+              <p>
+                <strong className="text-slate-950">+1 punto</strong> si
+                aciertas ganador o empate.
+              </p>
 
-            <p>Los pronósticos se bloquean cuando inicia el partido.</p>
-          </div>
-        </section>
+              <p>
+                <strong className="text-slate-950">+2 puntos extra</strong> si
+                aciertas marcador exacto.
+              </p>
+
+              <p>
+                <strong className="text-slate-950">3 puntos total</strong> por
+                marcador exacto.
+              </p>
+
+              <p>Los pronósticos se bloquean cuando inicia el partido.</p>
+            </div>
+          </section>
+        )}
       </main>
 
       <JoinLeagueModal
@@ -1172,7 +1304,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       <ResultModal
         isOpen={isResultModalOpen}
         onClose={() => setIsResultModalOpen(false)}
-        matches={matches}
+        matches={visibleMatches}
         onSaveResult={handleSaveResult}
         onClearResult={handleClearResult}
       />
