@@ -596,9 +596,9 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     await loadLeagueMembers();
   }
 
-  async function handleLoadBaseSchedule() {
+  async function handleSyncFootballDataMatches() {
   if (!isLeagueOwner) {
-    alert('Solo el administrador puede cargar partidos.');
+    alert('Solo el administrador puede sincronizar partidos.');
     return;
   }
 
@@ -617,42 +617,42 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
     if (result.total === 0) {
       alert(
-        'La API respondió correctamente, pero aún no encontró partidos 2026. Se cargará el calendario base.'
+        'La API respondió correctamente, pero aún no encontró partidos 2026.'
       );
-
-      await seedLeagueMatches({
-        leagueId: activeLeagueId,
-        matches: cleanBaseMatches(matches),
-      });
-
-      await loadLeagueMatches();
-      await loadLeaguePredictions();
-
       return;
     }
 
     alert(`Partidos sincronizados correctamente: ${result.total}`);
   } catch (error) {
     console.error('Error sincronizando football-data:', error);
+    alert('No se pudieron sincronizar los partidos desde la API.');
+  }
+}
 
-    alert(
-      'No se pudieron sincronizar los partidos desde la API. Se cargará el calendario base.'
-    );
+async function handleLoadBaseSchedule() {
+  if (!isLeagueOwner) {
+    alert('Solo el administrador puede cargar partidos.');
+    return;
+  }
 
-    try {
-      await seedLeagueMatches({
-        leagueId: activeLeagueId,
-        matches: cleanBaseMatches(matches),
-      });
+  if (!activeLeagueId || activeLeagueId === 'default') {
+    alert('Primero selecciona o crea una liga.');
+    return;
+  }
 
-      await loadLeagueMatches();
-      await loadLeaguePredictions();
+  try {
+    await seedLeagueMatches({
+      leagueId: activeLeagueId,
+      matches: cleanBaseMatches(matches),
+    });
 
-      alert('Partidos base cargados correctamente.');
-    } catch (fallbackError) {
-      console.error('Error cargando calendario base:', fallbackError);
-      alert('No se pudieron cargar los partidos. Intenta nuevamente.');
-    }
+    await loadLeagueMatches();
+    await loadLeaguePredictions();
+
+    alert('Partidos base cargados correctamente.');
+  } catch (error) {
+    console.error('Error cargando calendario base:', error);
+    alert('No se pudieron cargar los partidos base. Intenta nuevamente.');
   }
 }
 
@@ -1255,17 +1255,18 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
             </section>
 
             <AdminPanelCard
-              users={leagueAdminUsers}
-              matches={visibleMatches}
-              members={safeLeagueMembers}
-              entryFee={activeLeague?.entryFee || 0}
-              prizeMode={activeLeague?.prizeMode || 'fixed'}
-              onOpenResultModal={() => setIsResultModalOpen(true)}
-              onOpenCreateLeagueModal={() => setIsCreateLeagueModalOpen(true)}
-              onOpenPrizeEditorModal={() => setIsPrizeEditorModalOpen(true)}
-              onOpenPrizeSettingsModal={() => setIsPrizeSettingsModalOpen(true)}
-              onSeedMatches={handleLoadBaseSchedule}
-            />
+  users={leagueAdminUsers}
+  matches={visibleMatches}
+  members={safeLeagueMembers}
+  entryFee={activeLeague?.entryFee || 0}
+  prizeMode={activeLeague?.prizeMode || 'fixed'}
+  onOpenResultModal={() => setIsResultModalOpen(true)}
+  onOpenCreateLeagueModal={() => setIsCreateLeagueModalOpen(true)}
+  onOpenPrizeEditorModal={() => setIsPrizeEditorModalOpen(true)}
+  onOpenPrizeSettingsModal={() => setIsPrizeSettingsModalOpen(true)}
+  onSeedMatches={handleLoadBaseSchedule}
+  onSyncFootballDataMatches={handleSyncFootballDataMatches}
+/>
           </div>
         )}
 
