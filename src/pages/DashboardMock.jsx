@@ -86,6 +86,15 @@ import {
   sortMatchesByStatusAndDate,
 } from '../utils/matchUtils';
 
+
+function cleanBaseMatches(matches = []) {
+  return matches.map((match) => ({
+    ...match,
+    userPrediction: null,
+    result: null,
+  }));
+}
+
 function DashboardMock({ user, onLogout, onUpdateUser }) {
   const [activeSection, setActiveSection] = useState('home');
   const [activeStageId, setActiveStageId] = useState(stages[0].id);
@@ -132,12 +141,12 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       : activeLeagueMemberIds.length;
 
   const [matchesByLeague, setMatchesByLeague] = useState(() => ({
-    [activeLeagueId]: getStorageItem(matchesStorageKey, initialMatches),
+    [activeLeagueId]: getStorageItem(matchesStorageKey, cleanBaseMatches(initialMatches)),
   }));
 
   const matches =
     matchesByLeague[activeLeagueId] ??
-    getStorageItem(matchesStorageKey, initialMatches);
+    getStorageItem(matchesStorageKey, cleanBaseMatches(initialMatches));
 
   const activeStage = stages.find((stage) => stage.id === activeStageId);
 
@@ -389,7 +398,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
   async function loadLeagueMatches() {
     if (!activeLeagueId || activeLeagueId === 'default') {
-      const localMatches = getStorageItem(matchesStorageKey, initialMatches);
+      const localMatches = getStorageItem(matchesStorageKey, cleanBaseMatches(initialMatches));
 
       setMatchesByLeague((prevMatchesByLeague) => ({
         ...prevMatchesByLeague,
@@ -426,7 +435,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
         return;
       }
 
-      const localMatches = getStorageItem(matchesStorageKey, initialMatches);
+      const localMatches = getStorageItem(matchesStorageKey, cleanBaseMatches(initialMatches));
       const localMatchesWithPredictions = applyUserPredictionsToMatches(
         localMatches,
         userPredictions
@@ -439,7 +448,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     } catch (error) {
       console.error('Error cargando partidos desde Firestore:', error);
 
-      const localMatches = getStorageItem(matchesStorageKey, initialMatches);
+      const localMatches = getStorageItem(matchesStorageKey, cleanBaseMatches(initialMatches));
 
       setMatchesByLeague((prevMatchesByLeague) => ({
         ...prevMatchesByLeague,
@@ -625,7 +634,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     setMatchesByLeague((prevMatchesByLeague) => {
       const currentMatches =
         prevMatchesByLeague[activeLeagueId] ??
-        getStorageItem(matchesStorageKey, initialMatches);
+        getStorageItem(matchesStorageKey, cleanBaseMatches(initialMatches));
 
       const updatedMatches = currentMatches.map((match) => {
         if (match.id !== matchId) {
@@ -675,7 +684,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     setMatchesByLeague((prevMatchesByLeague) => {
       const currentMatches =
         prevMatchesByLeague[activeLeagueId] ??
-        getStorageItem(matchesStorageKey, initialMatches);
+        getStorageItem(matchesStorageKey, cleanBaseMatches(initialMatches));
 
       const updatedMatches = currentMatches.map((match) => {
         if (match.id !== matchId) {
@@ -724,7 +733,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     setMatchesByLeague((prevMatchesByLeague) => {
       const currentMatches =
         prevMatchesByLeague[activeLeagueId] ??
-        getStorageItem(matchesStorageKey, initialMatches);
+        getStorageItem(matchesStorageKey, cleanBaseMatches(initialMatches));
 
       const updatedMatches = currentMatches.map((match) => {
         if (match.id !== matchId) {
