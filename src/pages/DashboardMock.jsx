@@ -156,9 +156,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   const [leagueMembers, setLeagueMembers] = useState([]);
 
   const activeLeagueId = user?.activeLeagueId || user?.leagueCode || 'default';
-  const hasActiveLeague = Boolean(
-    user?.leagueCode && activeLeagueId !== 'default'
-  );
+  const hasActiveLeague = Boolean(activeLeagueId && activeLeagueId !== 'default');
   const matchesStorageKey = getLeagueMatchesStorageKey(activeLeagueId);
 
   const safeUserLeagues = Array.isArray(userLeagues) ? userLeagues : [];
@@ -350,23 +348,38 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   }
 
   async function loadUserLeagues() {
-    if (!user?.uid) {
-      setUserLeagues([]);
-      return;
-    }
-
-    setIsLoadingLeagues(true);
-
-    try {
-      const leagues = await getUserLeagues(user.uid);
-      setUserLeagues(leagues);
-    } catch (error) {
-      console.error('Error cargando ligas del usuario:', error);
-      setUserLeagues([]);
-    } finally {
-      setIsLoadingLeagues(false);
-    }
+  if (!user?.uid) {
+    setUserLeagues([]);
+    return;
   }
+
+  setIsLoadingLeagues(true);
+
+  try {
+    const leagues = await getUserLeagues(user.uid);
+    const safeLeagues = Array.isArray(leagues) ? leagues : [];
+
+    setUserLeagues(safeLeagues);
+
+    const userHasActiveLeague =
+      Boolean(user?.activeLeagueId) || Boolean(user?.leagueCode);
+
+    if (!userHasActiveLeague && safeLeagues.length > 0) {
+      const firstLeague = safeLeagues[0];
+
+      onUpdateUser({
+        leagueCode: firstLeague.code,
+        activeLeagueId: firstLeague.id,
+        leagueName: firstLeague.name,
+      });
+    }
+  } catch (error) {
+    console.error('Error cargando ligas del usuario:', error);
+    setUserLeagues([]);
+  } finally {
+    setIsLoadingLeagues(false);
+  }
+}
 
   async function loadLeagueMembers() {
     if (!activeLeagueId || activeLeagueId === 'default') {
