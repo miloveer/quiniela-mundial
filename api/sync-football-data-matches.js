@@ -109,6 +109,51 @@ async function fetchWorldCupMatches() {
   return Array.isArray(data.matches) ? data.matches : [];
 }
 
+function getBearerToken(request) {
+  const authorizationHeader =
+    request.headers.authorization || request.headers.Authorization || '';
+
+  if (!authorizationHeader.startsWith('Bearer ')) {
+    return null;
+  }
+
+  return authorizationHeader.replace('Bearer ', '').trim();
+}
+
+async function validateLeagueOwner({ request, db, leagueId }) {
+  const token = getBearerToken(request);
+
+  if (!token) {
+    const error = new Error('MISSING_AUTH_TOKEN');
+    error.statusCode = 401;
+    throw error;
+  }
+
+  const decodedToken = await admin.auth().verifyIdToken(token);
+
+  const leagueRef = db.collection('leagues').doc(leagueId);
+  const leagueSnapshot = await leagueRef.get();
+
+  if (!leagueSnapshot.exists) {
+    const error = new Error('LEAGUE_NOT_FOUND');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const league = leagueSnapshot.data();
+
+  if (league.ownerId !== decodedToken.uid) {
+    const error = new Error('NOT_LEAGUE_OWNER');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  return {
+    uid: decodedToken.uid,
+    league,
+  };
+}
+
 export default async function handler(request, response) {
   try {
     if (request.method !== 'POST') {
@@ -130,6 +175,12 @@ export default async function handler(request, response) {
     initializeFirebaseAdmin();
 
     const db = admin.firestore();
+
+    await validateLeagueOwner({
+      request,
+      db,
+      leagueId,
+    });
 
     const apiMatches = await fetchWorldCupMatches();
     const normalizedMatches = apiMatches.map(normalizeMatch);
@@ -182,7 +233,7 @@ export default async function handler(request, response) {
   } catch (error) {
     console.error('SYNC_FOOTBALL_DATA_FAILED:', error);
 
-    return response.status(500).json({
+    return response.status(error.statusCode || 500).json({
       ok: false,
       error: 'SYNC_FOOTBALL_DATA_FAILED',
       message: error.message,
