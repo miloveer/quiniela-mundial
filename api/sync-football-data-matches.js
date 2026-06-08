@@ -1,5 +1,5 @@
-import admin from 'firebase-admin';
 import process from 'node:process';
+import admin from 'firebase-admin';
 
 function getServiceAccount() {
   const rawServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
@@ -31,12 +31,29 @@ function initializeFirebaseAdmin() {
 function normalizeStage(stage = '') {
   const cleanStage = stage.toLowerCase();
 
-  if (cleanStage.includes('group')) return 'group-stage';
-  if (cleanStage.includes('last 32') || cleanStage.includes('round of 32')) return 'round-32';
-  if (cleanStage.includes('last 16') || cleanStage.includes('round of 16')) return 'round-16';
-  if (cleanStage.includes('quarter')) return 'quarter-finals';
-  if (cleanStage.includes('semi')) return 'semi-finals';
-  if (cleanStage.includes('third') || cleanStage.includes('final')) return 'finals';
+  if (cleanStage.includes('group')) {
+    return 'group-stage';
+  }
+
+  if (cleanStage.includes('last 32') || cleanStage.includes('round of 32')) {
+    return 'round-32';
+  }
+
+  if (cleanStage.includes('last 16') || cleanStage.includes('round of 16')) {
+    return 'round-16';
+  }
+
+  if (cleanStage.includes('quarter')) {
+    return 'quarter-finals';
+  }
+
+  if (cleanStage.includes('semi')) {
+    return 'semi-finals';
+  }
+
+  if (cleanStage.includes('third') || cleanStage.includes('final')) {
+    return 'finals';
+  }
 
   return 'group-stage';
 }
@@ -113,6 +130,7 @@ export default async function handler(request, response) {
     initializeFirebaseAdmin();
 
     const db = admin.firestore();
+
     const apiMatches = await fetchWorldCupMatches();
     const normalizedMatches = apiMatches.map(normalizeMatch);
 
@@ -120,6 +138,8 @@ export default async function handler(request, response) {
       return response.status(200).json({
         ok: true,
         total: 0,
+        finishedMatches: 0,
+        pendingMatches: 0,
         message: 'NO_MATCHES_FOUND',
       });
     }
@@ -133,30 +153,32 @@ export default async function handler(request, response) {
         .collection('matches')
         .doc(match.id);
 
-      batch.set(
-        matchRef,
-        {
-          ...match,
-          userPrediction: admin.firestore.FieldValue.delete(),
-        },
-        {
-          merge: true,
-        }
-      );
+      const matchDataToSave = {
+        ...match,
+        userPrediction: admin.firestore.FieldValue.delete(),
+      };
+
+      if (match.result === null) {
+        delete matchDataToSave.result;
+      }
+
+      batch.set(matchRef, matchDataToSave, {
+        merge: true,
+      });
     });
 
     await batch.commit();
 
     const finishedMatches = normalizedMatches.filter((match) => {
-  return match.result !== null;
-}).length;
+      return match.result !== null;
+    }).length;
 
-return response.status(200).json({
-  ok: true,
-  total: normalizedMatches.length,
-  finishedMatches,
-  pendingMatches: normalizedMatches.length - finishedMatches,
-});
+    return response.status(200).json({
+      ok: true,
+      total: normalizedMatches.length,
+      finishedMatches,
+      pendingMatches: normalizedMatches.length - finishedMatches,
+    });
   } catch (error) {
     console.error('SYNC_FOOTBALL_DATA_FAILED:', error);
 
