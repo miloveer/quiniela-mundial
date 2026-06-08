@@ -147,10 +147,16 @@ export default async function handler(request, response) {
 
     await batch.commit();
 
-    return response.status(200).json({
-      ok: true,
-      total: normalizedMatches.length,
-    });
+    const finishedMatches = normalizedMatches.filter((match) => {
+  return match.result !== null;
+}).length;
+
+return response.status(200).json({
+  ok: true,
+  total: normalizedMatches.length,
+  finishedMatches,
+  pendingMatches: normalizedMatches.length - finishedMatches,
+});
   } catch (error) {
     console.error('SYNC_FOOTBALL_DATA_FAILED:', error);
 

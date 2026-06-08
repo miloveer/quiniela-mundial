@@ -622,7 +622,9 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       return;
     }
 
-    alert(`Partidos sincronizados correctamente: ${result.total}`);
+    alert(
+  `Sincronización completada:\n${result.total} partidos encontrados.\n${result.finishedMatches || 0} resultados oficiales actualizados.`
+);
   } catch (error) {
     console.error('Error sincronizando football-data:', error);
     alert('No se pudieron sincronizar los partidos desde la API.');
