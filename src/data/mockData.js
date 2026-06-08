@@ -78,71 +78,9 @@ export const matches = [
   },
 ];
 
-export const ranking = [
-  {
-    id: 'user-001',
-    name: 'Milo',
-    points: 0,
-    exactScores: 0,
-    resultHits: 0,
-    predictionsCount: 0,
-    badge: 'Participante',
-  },
-  {
-    id: 'user-002',
-    name: 'Carlos',
-    points: 0,
-    exactScores: 0,
-    resultHits: 0,
-    predictionsCount: 0,
-    badge: 'Participante',
-  },
-  {
-    id: 'user-003',
-    name: 'Ana',
-    points: 0,
-    exactScores: 0,
-    resultHits: 0,
-    predictionsCount: 0,
-    badge: 'Participante',
-  },
-  {
-    id: 'user-004',
-    name: 'Luis',
-    points: 0,
-    exactScores: 0,
-    resultHits: 0,
-    predictionsCount: 0,
-    badge: 'Participante',
-  },
-];
+export const ranking = [];
 
-export const users = [
-  {
-    id: 'user-001',
-    name: 'Milo',
-    badge: 'Participante',
-    predictions: {},
-  },
-  {
-    id: 'user-002',
-    name: 'Carlos',
-    badge: 'Participante',
-    predictions: {},
-  },
-  {
-    id: 'user-003',
-    name: 'Ana',
-    badge: 'Participante',
-    predictions: {},
-  },
-  {
-    id: 'user-004',
-    name: 'Luis',
-    badge: 'Participante',
-    predictions: {},
-  },
-];
+export const users = [];
 
 export const prizes = [
   {
