@@ -44,7 +44,6 @@ import {
 
 import {
   getLeagueMatches,
-  seedLeagueMatches,
   updateMatchResult,
 } from '../services/matchService';
 
@@ -637,33 +636,6 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   } catch (error) {
     console.error('Error sincronizando football-data:', error);
     alert('No se pudieron sincronizar los partidos desde la API.');
-  }
-}
-
-async function handleLoadBaseSchedule() {
-  if (!isLeagueOwner) {
-    alert('Solo el administrador puede cargar partidos.');
-    return;
-  }
-
-  if (!activeLeagueId || activeLeagueId === 'default') {
-    alert('Primero selecciona o crea una liga.');
-    return;
-  }
-
-  try {
-    await seedLeagueMatches({
-      leagueId: activeLeagueId,
-      matches: cleanBaseMatches(matches),
-    });
-
-    await loadLeagueMatches();
-    await loadLeaguePredictions();
-
-    alert('Partidos base cargados correctamente.');
-  } catch (error) {
-    console.error('Error cargando calendario base:', error);
-    alert('No se pudieron cargar los partidos base. Intenta nuevamente.');
   }
 }
 
@@ -1275,7 +1247,6 @@ async function handleLoadBaseSchedule() {
   onOpenCreateLeagueModal={() => setIsCreateLeagueModalOpen(true)}
   onOpenPrizeEditorModal={() => setIsPrizeEditorModalOpen(true)}
   onOpenPrizeSettingsModal={() => setIsPrizeSettingsModalOpen(true)}
-  onSeedMatches={handleLoadBaseSchedule}
   onSyncFootballDataMatches={handleSyncFootballDataMatches}
 />
           </div>
