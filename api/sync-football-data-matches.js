@@ -1,15 +1,27 @@
-/* eslint-env node */
-/* global process */
 import admin from 'firebase-admin';
+import process from 'node:process';
+
+function getServiceAccount() {
+  const rawServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+
+  if (!rawServiceAccount) {
+    throw new Error('MISSING_FIREBASE_SERVICE_ACCOUNT_KEY');
+  }
+
+  const serviceAccount = JSON.parse(rawServiceAccount);
+
+  return {
+    ...serviceAccount,
+    private_key: serviceAccount.private_key?.replace(/\\n/g, '\n'),
+  };
+}
 
 function initializeFirebaseAdmin() {
   if (admin.apps.length > 0) {
     return admin.app();
   }
 
-  const serviceAccount = JSON.parse(
-    process.env.FIREBASE_SERVICE_ACCOUNT_KEY
-  );
+  const serviceAccount = getServiceAccount();
 
   return admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
@@ -19,29 +31,12 @@ function initializeFirebaseAdmin() {
 function normalizeStage(stage = '') {
   const cleanStage = stage.toLowerCase();
 
-  if (cleanStage.includes('group')) {
-    return 'group-stage';
-  }
-
-  if (cleanStage.includes('last 32') || cleanStage.includes('round of 32')) {
-    return 'round-32';
-  }
-
-  if (cleanStage.includes('last 16') || cleanStage.includes('round of 16')) {
-    return 'round-16';
-  }
-
-  if (cleanStage.includes('quarter')) {
-    return 'quarter-finals';
-  }
-
-  if (cleanStage.includes('semi')) {
-    return 'semi-finals';
-  }
-
-  if (cleanStage.includes('third') || cleanStage.includes('final')) {
-    return 'finals';
-  }
+  if (cleanStage.includes('group')) return 'group-stage';
+  if (cleanStage.includes('last 32') || cleanStage.includes('round of 32')) return 'round-32';
+  if (cleanStage.includes('last 16') || cleanStage.includes('round of 16')) return 'round-16';
+  if (cleanStage.includes('quarter')) return 'quarter-finals';
+  if (cleanStage.includes('semi')) return 'semi-finals';
+  if (cleanStage.includes('third') || cleanStage.includes('final')) return 'finals';
 
   return 'group-stage';
 }
@@ -75,6 +70,10 @@ function normalizeMatch(match) {
 }
 
 async function fetchWorldCupMatches() {
+  if (!process.env.FOOTBALL_DATA_TOKEN) {
+    throw new Error('MISSING_FOOTBALL_DATA_TOKEN');
+  }
+
   const response = await fetch(
     'https://api.football-data.org/v4/competitions/WC/matches?season=2026',
     {
@@ -94,30 +93,20 @@ async function fetchWorldCupMatches() {
 }
 
 export default async function handler(request, response) {
-  if (request.method !== 'POST') {
-    return response.status(405).json({
-      error: 'METHOD_NOT_ALLOWED',
-    });
-  }
-
   try {
+    if (request.method !== 'POST') {
+      return response.status(405).json({
+        ok: false,
+        error: 'METHOD_NOT_ALLOWED',
+      });
+    }
+
     const { leagueId } = request.body || {};
 
     if (!leagueId) {
       return response.status(400).json({
+        ok: false,
         error: 'MISSING_LEAGUE_ID',
-      });
-    }
-
-    if (!process.env.FOOTBALL_DATA_TOKEN) {
-      return response.status(500).json({
-        error: 'MISSING_FOOTBALL_DATA_TOKEN',
-      });
-    }
-
-    if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-      return response.status(500).json({
-        error: 'MISSING_FIREBASE_SERVICE_ACCOUNT_KEY',
       });
     }
 
@@ -163,9 +152,10 @@ export default async function handler(request, response) {
       total: normalizedMatches.length,
     });
   } catch (error) {
-    console.error('Error sincronizando football-data:', error);
+    console.error('SYNC_FOOTBALL_DATA_FAILED:', error);
 
     return response.status(500).json({
+      ok: false,
       error: 'SYNC_FOOTBALL_DATA_FAILED',
       message: error.message,
     });
