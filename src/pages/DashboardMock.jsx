@@ -57,7 +57,6 @@ import {
   matches as initialMatches,
   prizes as initialPrizes,
   stages,
-  users,
 } from '../data/mockData';
 
 import {
@@ -238,12 +237,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     }, {}),
   };
 
-  const mockUsersWithoutCurrentUser = users.filter(
-    (mockUser) =>
-      mockUser.name.toLowerCase() !== currentUserName.toLowerCase()
-  );
-
-  const rankingUsers = [currentUserForRanking, ...mockUsersWithoutCurrentUser];
+  const rankingUsers = hasActiveLeague ? [currentUserForRanking] : [];
 
   const memberPredictions =
     activeLeagueMemberIds.length > 0
@@ -282,33 +276,35 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
         : [];
 
   const leagueAdminUsers =
-    hasActiveLeague && userProfiles.length > 0
-      ? userProfiles.map((profile) => {
-          const profileId = profile.uid || profile.id;
+  hasActiveLeague && userProfiles.length > 0
+    ? userProfiles.map((profile) => {
+        const profileId = profile.uid || profile.id;
 
-          const userPredictions = memberPredictions.filter(
-            (prediction) => prediction.userId === profileId
-          );
+        const userPredictions = memberPredictions.filter(
+          (prediction) => prediction.userId === profileId
+        );
 
-          const predictionsMap = userPredictions.reduce(
-            (accumulator, predictionDoc) => {
-              return {
-                ...accumulator,
-                [predictionDoc.matchId]: predictionDoc.prediction,
-              };
-            },
-            {}
-          );
+        const predictionsMap = userPredictions.reduce(
+          (accumulator, predictionDoc) => {
+            return {
+              ...accumulator,
+              [predictionDoc.matchId]: predictionDoc.prediction,
+            };
+          },
+          {}
+        );
 
-          return {
-            id: profileId,
-            uid: profileId,
-            name: profile.displayName || 'Usuario',
-            badge: profileId === user?.uid ? 'Tú' : 'Participante',
-            predictions: predictionsMap,
-          };
-        })
-      : rankingUsers;
+        return {
+          id: profileId,
+          uid: profileId,
+          name: profile.displayName || 'Usuario',
+          badge: profileId === user?.uid ? 'Tú' : 'Participante',
+          predictions: predictionsMap,
+        };
+      })
+    : hasActiveLeague
+      ? [currentUserForRanking]
+      : [];
 
   const currentUserPosition = getUserRankingPosition(ranking, currentUserName);
 
