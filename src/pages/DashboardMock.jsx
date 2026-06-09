@@ -273,7 +273,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
         : [];
 
   const leagueAdminUsers =
-  hasActiveLeague && userProfiles.length > 0
+    hasActiveLeague && userProfiles.length > 0
     ? userProfiles.map((profile) => {
         const profileId = profile.uid || profile.id;
 
@@ -347,38 +347,38 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   }
 
   async function loadUserLeagues() {
-  if (!user?.uid) {
-    setUserLeagues([]);
-    return;
-  }
-
-  setIsLoadingLeagues(true);
-
-  try {
-    const leagues = await getUserLeagues(user.uid);
-    const safeLeagues = Array.isArray(leagues) ? leagues : [];
-
-    setUserLeagues(safeLeagues);
-
-    const userHasActiveLeague =
-      Boolean(user?.activeLeagueId) || Boolean(user?.leagueCode);
-
-    if (!userHasActiveLeague && safeLeagues.length > 0) {
-      const firstLeague = safeLeagues[0];
-
-      onUpdateUser({
-        leagueCode: firstLeague.code,
-        activeLeagueId: firstLeague.id,
-        leagueName: firstLeague.name,
-      });
+    if (!user?.uid) {
+      setUserLeagues([]);
+      return;
     }
-  } catch (error) {
-    console.error('Error cargando ligas del usuario:', error);
-    setUserLeagues([]);
-  } finally {
-    setIsLoadingLeagues(false);
+
+    setIsLoadingLeagues(true);
+
+    try {
+      const leagues = await getUserLeagues(user.uid);
+      const safeLeagues = Array.isArray(leagues) ? leagues : [];
+
+      setUserLeagues(safeLeagues);
+
+      const userHasActiveLeague =
+        Boolean(user?.activeLeagueId) || Boolean(user?.leagueCode);
+
+      if (!userHasActiveLeague && safeLeagues.length > 0) {
+        const firstLeague = safeLeagues[0];
+
+        onUpdateUser({
+          leagueCode: firstLeague.code,
+          activeLeagueId: firstLeague.id,
+          leagueName: firstLeague.name,
+        });
+      }
+    } catch (error) {
+      console.error('Error cargando ligas del usuario:', error);
+      setUserLeagues([]);
+    } finally {
+      setIsLoadingLeagues(false);
+    }
   }
-}
 
   async function loadLeagueMembers() {
     if (!activeLeagueId || activeLeagueId === 'default') {
@@ -568,6 +568,8 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       leagueName: league.name,
     });
 
+    setIsJoinLeagueModalOpen(false);
+
     await loadUserLeagues();
     await loadUserProfiles();
     await loadLeagueMembers();
@@ -579,30 +581,32 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   }
 
   async function handleCreateLeague({ name, code, entryFee, prizeMode }) {
-    if (!user?.uid) {
-      throw new Error('USER_NOT_AUTHENTICATED');
-    }
-
-    const league = await createLeague({
-      name,
-      code,
-      ownerId: user.uid,
-      ownerDisplayName: user.displayName,
-      ownerEmail: user.email,
-      entryFee,
-      prizeMode,
-    });
-
-    onUpdateUser({
-      leagueCode: league.code,
-      activeLeagueId: league.id,
-      leagueName: league.name,
-    });
-
-    await loadUserLeagues();
-    await loadUserProfiles();
-    await loadLeagueMembers();
+  if (!user?.uid) {
+    throw new Error('USER_NOT_AUTHENTICATED');
   }
+
+  const league = await createLeague({
+    name,
+    code,
+    ownerId: user.uid,
+    ownerDisplayName: user.displayName,
+    ownerEmail: user.email,
+    entryFee,
+    prizeMode,
+  });
+
+  onUpdateUser({
+    leagueCode: league.code,
+    activeLeagueId: league.id,
+    leagueName: league.name,
+  });
+
+  setIsCreateLeagueModalOpen(false);
+
+  await loadUserLeagues();
+  await loadUserProfiles();
+  await loadLeagueMembers();
+}
 
   async function handleSyncFootballDataMatches() {
   if (!isLeagueOwner) {
@@ -953,23 +957,41 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                 </div>
 
                 {user?.leagueCode ? (
-                  <div className="flex flex-col gap-2 sm:items-end">
-                    <div className="flex items-center gap-2 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700">
-                      <KeyRound size={18} />
-                      Liga activa
-                    </div>
+  <div className="flex flex-col gap-2 sm:items-end">
+    <div className="flex items-center gap-2 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700">
+      <KeyRound size={18} />
+      Liga activa
+    </div>
 
-                    <div
-                      className={`rounded-2xl px-4 py-2 text-xs font-black ${
-                        isLeagueOwner
-                          ? 'bg-slate-950 text-white'
-                          : 'bg-slate-100 text-slate-600'
-                      }`}
-                    >
-                      {isLeagueOwner ? 'Administrador' : 'Participante'}
-                    </div>
-                  </div>
-                ) : (
+    <div
+      className={`rounded-2xl px-4 py-2 text-xs font-black ${
+        isLeagueOwner
+          ? 'bg-slate-950 text-white'
+          : 'bg-slate-100 text-slate-600'
+      }`}
+    >
+      {isLeagueOwner ? 'Administrador' : 'Participante'}
+    </div>
+
+    <div className="grid w-full gap-2 sm:w-auto sm:grid-cols-2">
+      <button
+        type="button"
+        onClick={() => setIsJoinLeagueModalOpen(true)}
+        className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+      >
+        Unirme a otra
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setIsCreateLeagueModalOpen(true)}
+        className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-700"
+      >
+        Crear otra
+      </button>
+    </div>
+  </div>
+) : (
                   <button
                     type="button"
                     onClick={() => setIsJoinLeagueModalOpen(true)}

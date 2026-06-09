@@ -5,6 +5,7 @@ import {
   signOut,
   updateProfile,
 } from 'firebase/auth';
+
 import { auth } from '../firebase/firebaseConfig';
 
 function mapFirebaseUser(user) {
