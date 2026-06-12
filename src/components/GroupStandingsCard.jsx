@@ -22,19 +22,19 @@ function GroupStandingsCard({ groupStandings = {} }) {
             <h3 className="text-lg font-black">{groupLabel}</h3>
           </div>
 
-          <div className="w-full overflow-x-auto">
-            <table className="w-full min-w-[520px] table-fixed text-left text-xs sm:text-sm">
-              <thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-400 sm:text-xs">
+          <div className="w-full">
+            <table className="w-full table-fixed text-[10px] sm:text-xs">
+              <thead className="bg-slate-50 text-[9px] uppercase tracking-wide text-slate-400 sm:text-[10px]">
                 <tr>
-                  <th className="w-[190px] px-3 py-3">Equipo</th>
-                  <th className="w-[42px] px-2 py-3 text-center">PJ</th>
-                  <th className="w-[42px] px-2 py-3 text-center">G</th>
-                  <th className="w-[42px] px-2 py-3 text-center">E</th>
-                  <th className="w-[42px] px-2 py-3 text-center">P</th>
-                  <th className="w-[42px] px-2 py-3 text-center">GF</th>
-                  <th className="w-[42px] px-2 py-3 text-center">GC</th>
-                  <th className="w-[42px] px-2 py-3 text-center">DG</th>
-                  <th className="w-[50px] px-2 py-3 text-center">PTS</th>
+                  <th className="w-[38%] px-2 py-3 text-left">Equipo</th>
+                  <th className="w-[7%] px-1 py-3 text-center">PJ</th>
+                  <th className="w-[7%] px-1 py-3 text-center">G</th>
+                  <th className="w-[7%] px-1 py-3 text-center">E</th>
+                  <th className="w-[7%] px-1 py-3 text-center">P</th>
+                  <th className="w-[8%] px-1 py-3 text-center">GF</th>
+                  <th className="w-[8%] px-1 py-3 text-center">GC</th>
+                  <th className="w-[8%] px-1 py-3 text-center">DG</th>
+                  <th className="w-[10%] px-1 py-3 text-center">PTS</th>
                 </tr>
               </thead>
 
@@ -44,17 +44,19 @@ function GroupStandingsCard({ groupStandings = {} }) {
 
                   return (
                     <tr key={team.teamName} className="text-slate-700">
-                      <td className="px-3 py-3 font-black text-slate-950">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <span className="text-lg">
+                      <td className="px-2 py-3 font-black text-slate-950">
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <span className="shrink-0 text-base">
                             {getTeamFlag(team.teamName)}
                           </span>
 
                           <div className="min-w-0">
-                            <p className="truncate">{displayName}</p>
+                            <p className="truncate leading-tight">
+                              {displayName}
+                            </p>
 
                             {index < 2 && (
-                              <p className="mt-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-600">
+                              <p className="mt-0.5 text-[8px] font-black uppercase tracking-wide text-emerald-600 sm:text-[9px]">
                                 Clasifica
                               </p>
                             )}
@@ -62,31 +64,31 @@ function GroupStandingsCard({ groupStandings = {} }) {
                         </div>
                       </td>
 
-                      <td className="px-2 py-3 text-center font-bold">
+                      <td className="px-1 py-3 text-center font-bold">
                         {team.played}
                       </td>
 
-                      <td className="px-2 py-3 text-center">{team.won}</td>
+                      <td className="px-1 py-3 text-center">{team.won}</td>
 
-                      <td className="px-2 py-3 text-center">{team.drawn}</td>
+                      <td className="px-1 py-3 text-center">{team.drawn}</td>
 
-                      <td className="px-2 py-3 text-center">{team.lost}</td>
+                      <td className="px-1 py-3 text-center">{team.lost}</td>
 
-                      <td className="px-2 py-3 text-center">
+                      <td className="px-1 py-3 text-center">
                         {team.goalsFor}
                       </td>
 
-                      <td className="px-2 py-3 text-center">
+                      <td className="px-1 py-3 text-center">
                         {team.goalsAgainst}
                       </td>
 
-                      <td className="px-2 py-3 text-center">
+                      <td className="px-1 py-3 text-center">
                         {team.goalDifference > 0
                           ? `+${team.goalDifference}`
                           : team.goalDifference}
                       </td>
 
-                      <td className="px-2 py-3 text-center text-base font-black text-emerald-700">
+                      <td className="px-1 py-3 text-center text-xs font-black text-emerald-700 sm:text-sm">
                         {team.points}
                       </td>
                     </tr>
