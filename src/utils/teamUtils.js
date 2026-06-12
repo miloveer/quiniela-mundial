@@ -23,9 +23,9 @@ const TEAM_FLAGS = {
   spain: '🇪🇸',
   france: '🇫🇷',
   germany: '🇩🇪',
-  england: '🏴',
-  scotland: '🏴',
-  wales: '🏴',
+  england: 'gbeng',
+  scotland: 'gbsct',
+  wales: 'gbwls',
   portugal: '🇵🇹',
   italy: '🇮🇹',
   netherlands: '🇳🇱',
@@ -52,6 +52,9 @@ const TEAM_FLAGS = {
   ireland: '🇮🇪',
   'republic of ireland': '🇮🇪',
   greece: '🇬🇷',
+  'bosnia and herzegovina': '🇧🇦',
+'bosnia-herzegovina': '🇧🇦',
+bosnia: '🇧🇦',
 
   // Asia
   japan: '🇯🇵',
@@ -173,6 +176,9 @@ const TEAM_TRANSLATIONS = {
   ireland: 'Irlanda',
   'republic of ireland': 'Irlanda',
   greece: 'Grecia',
+  'bosnia and herzegovina': 'Bosnia y Herzegovina',
+'bosnia-herzegovina': 'Bosnia y Herzegovina',
+bosnia: 'Bosnia y Herzegovina',
 
   // Asia
   japan: 'Japón',
