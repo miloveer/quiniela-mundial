@@ -1,9 +1,12 @@
 const TEAM_FLAGS = {
+  // Norteamérica
   mexico: '🇲🇽',
-  méxico: '🇲🇽',
-  canada: '🇨🇦',
   'united states': '🇺🇸',
   usa: '🇺🇸',
+  'united states of america': '🇺🇸',
+  canada: '🇨🇦',
+
+  // Sudamérica
   argentina: '🇦🇷',
   brazil: '🇧🇷',
   brasil: '🇧🇷',
@@ -16,53 +19,103 @@ const TEAM_FLAGS = {
   bolivia: '🇧🇴',
   venezuela: '🇻🇪',
 
+  // Europa
   spain: '🇪🇸',
-  españa: '🇪🇸',
   france: '🇫🇷',
-  francia: '🇫🇷',
   germany: '🇩🇪',
-  alemania: '🇩🇪',
   england: '🏴',
-  inglaterra: '🏴',
+  scotland: '🏴',
+  wales: '🏴',
   portugal: '🇵🇹',
   italy: '🇮🇹',
-  italia: '🇮🇹',
   netherlands: '🇳🇱',
-  'países bajos': '🇳🇱',
+  holland: '🇳🇱',
   belgium: '🇧🇪',
-  bélgica: '🇧🇪',
   croatia: '🇭🇷',
-  croacia: '🇭🇷',
   switzerland: '🇨🇭',
-  suiza: '🇨🇭',
   denmark: '🇩🇰',
-  dinamarca: '🇩🇰',
   serbia: '🇷🇸',
   poland: '🇵🇱',
-  polonia: '🇵🇱',
+  austria: '🇦🇹',
+  hungary: '🇭🇺',
+  romania: '🇷🇴',
+  ukraine: '🇺🇦',
+  turkey: '🇹🇷',
+  türkiye: '🇹🇷',
+  czechia: '🇨🇿',
+  'czech republic': '🇨🇿',
+  slovakia: '🇸🇰',
+  slovenia: '🇸🇮',
+  norway: '🇳🇴',
+  sweden: '🇸🇪',
+  finland: '🇫🇮',
+  ireland: '🇮🇪',
+  'republic of ireland': '🇮🇪',
+  greece: '🇬🇷',
 
+  // Asia
   japan: '🇯🇵',
-  japón: '🇯🇵',
-  korea: '🇰🇷',
   'south korea': '🇰🇷',
-  'corea del sur': '🇰🇷',
+  korea: '🇰🇷',
   australia: '🇦🇺',
   iran: '🇮🇷',
   'saudi arabia': '🇸🇦',
-  'arabia saudita': '🇸🇦',
   qatar: '🇶🇦',
+  iraq: '🇮🇶',
+  jordan: '🇯🇴',
+  uzbekistan: '🇺🇿',
+  china: '🇨🇳',
+  indonesia: '🇮🇩',
+  thailand: '🇹🇭',
+  vietnam: '🇻🇳',
+  'united arab emirates': '🇦🇪',
+  uae: '🇦🇪',
+  oman: '🇴🇲',
+  bahrain: '🇧🇭',
+  kuwait: '🇰🇼',
 
+  // África
   morocco: '🇲🇦',
-  marruecos: '🇲🇦',
   senegal: '🇸🇳',
   ghana: '🇬🇭',
   nigeria: '🇳🇬',
   cameroon: '🇨🇲',
-  camerún: '🇨🇲',
   tunisia: '🇹🇳',
-  túnez: '🇹🇳',
   egypt: '🇪🇬',
-  egipto: '🇪🇬',
+  algeria: '🇩🇿',
+  mali: '🇲🇱',
+  ivory: '🇨🇮',
+  'ivory coast': '🇨🇮',
+  "cote d'ivoire": '🇨🇮',
+  'côte d’ivoire': '🇨🇮',
+  'south africa': '🇿🇦',
+  zambia: '🇿🇲',
+  angola: '🇦🇴',
+  congo: '🇨🇩',
+  'dr congo': '🇨🇩',
+  'democratic republic of congo': '🇨🇩',
+  gabon: '🇬🇦',
+  guinea: '🇬🇳',
+  'equatorial guinea': '🇬🇶',
+  cape: '🇨🇻',
+  'cape verde': '🇨🇻',
+
+  // Concacaf / Caribe / Centroamérica
+  costa: '🇨🇷',
+  'costa rica': '🇨🇷',
+  panama: '🇵🇦',
+  honduras: '🇭🇳',
+  jamaica: '🇯🇲',
+  'el salvador': '🇸🇻',
+  guatemala: '🇬🇹',
+  haiti: '🇭🇹',
+  curaçao: '🇨🇼',
+  curacao: '🇨🇼',
+  'trinidad and tobago': '🇹🇹',
+  'dominican republic': '🇩🇴',
+
+  // Oceanía
+  'new zealand': '🇳🇿',
 };
 
 export function normalizeTeamName(teamName = '') {
@@ -77,9 +130,17 @@ export function normalizeTeamName(teamName = '') {
 export function getTeamFlag(teamName = '') {
   const normalizedTeamName = normalizeTeamName(teamName);
 
-  return (
-    TEAM_FLAGS[normalizedTeamName] ||
-    TEAM_FLAGS[teamName.toString().trim().toLowerCase()] ||
-    '🏳️'
-  );
+  if (TEAM_FLAGS[normalizedTeamName]) {
+    return TEAM_FLAGS[normalizedTeamName];
+  }
+
+  const matchedKey = Object.keys(TEAM_FLAGS).find((teamKey) => {
+    return (
+      normalizedTeamName === teamKey ||
+      normalizedTeamName.includes(teamKey) ||
+      teamKey.includes(normalizedTeamName)
+    );
+  });
+
+  return matchedKey ? TEAM_FLAGS[matchedKey] : '🏳️';
 }
