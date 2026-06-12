@@ -14,7 +14,7 @@ import {
   isPredictionLocked,
 } from "../utils/matchUtils";
 import { calculatePredictionPoints } from "../utils/scoreUtils";
-import { getTeamDisplayName, getTeamFlag } from '../utils/teamUtils';
+import { getTeamDisplayName, getTeamFlag } from "../utils/teamUtils";
 
 function getMatchStatus({ hasPrediction, hasResult, isLocked, lockMessage }) {
   if (hasResult) {
@@ -59,9 +59,9 @@ function MatchCard({ match, onSavePrediction }) {
   const lockMessage = getLockMessage(match.date);
   const points = calculatePredictionPoints(match.userPrediction, match.result);
   const homeTeamFlag = getTeamFlag(match.homeTeam);
-const awayTeamFlag = getTeamFlag(match.awayTeam);
-const homeTeamName = getTeamDisplayName(match.homeTeam);
-const awayTeamName = getTeamDisplayName(match.awayTeam);
+  const awayTeamFlag = getTeamFlag(match.awayTeam);
+  const homeTeamName = getTeamDisplayName(match.homeTeam);
+  const awayTeamName = getTeamDisplayName(match.awayTeam);
 
   const status = getMatchStatus({
     hasPrediction,
@@ -136,8 +136,34 @@ const awayTeamName = getTeamDisplayName(match.awayTeam);
     setAwayScore("");
   }
 
+  const cardClasses = hasResult
+    ? "border-slate-950 bg-white"
+    : hasPrediction
+      ? "border-emerald-300 bg-emerald-50/40"
+      : isLocked
+        ? "border-rose-200 bg-rose-50/30"
+        : "border-slate-200 bg-white";
   return (
-    <article className="rounded-[1.5rem] border border-slate-200 bg-white p-3 shadow-sm transition hover:shadow-lg sm:rounded-[1.8rem] sm:p-4">
+    <article
+      className={`rounded-[1.5rem] border border-slate-200 bg-white p-3 shadow-sm transition hover:shadow-lg sm:rounded-[1.8rem] sm:p-4 ${cardClasses}`}
+    >
+      <div className="mb-3 flex items-center justify-between rounded-2xl bg-white/80 px-3 py-2">
+        <p className="text-xs font-black uppercase tracking-wider text-slate-500">
+          {hasResult
+            ? "Partido finalizado"
+            : hasPrediction
+              ? "Ya llenaste este partido"
+              : isLocked
+                ? "Partido cerrado"
+                : "Pendiente por llenar"}
+        </p>
+
+        {hasPrediction && !hasResult && (
+          <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-black text-emerald-700">
+            LISTO
+          </span>
+        )}
+      </div>
       <div className="mb-3 flex flex-col gap-3 sm:mb-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400 sm:text-xs">
