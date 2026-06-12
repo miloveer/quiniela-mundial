@@ -1,18 +1,18 @@
-import process from 'node:process';
-import admin from 'firebase-admin';
+import process from "node:process";
+import admin from "firebase-admin";
 
 function getServiceAccount() {
   const rawServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
   if (!rawServiceAccount) {
-    throw new Error('MISSING_FIREBASE_SERVICE_ACCOUNT_KEY');
+    throw new Error("MISSING_FIREBASE_SERVICE_ACCOUNT_KEY");
   }
 
   const serviceAccount = JSON.parse(rawServiceAccount);
 
   return {
     ...serviceAccount,
-    private_key: serviceAccount.private_key?.replace(/\\n/g, '\n'),
+    private_key: serviceAccount.private_key?.replace(/\\n/g, "\n"),
   };
 }
 
@@ -28,56 +28,66 @@ function initializeFirebaseAdmin() {
   });
 }
 
-function normalizeStage(stage = '') {
-  const cleanStage = stage.toLowerCase();
+function normalizeStage(stage = "") {
+  const cleanStage = stage.toString().trim().toLowerCase().replace(/_/g, " ");
 
-  if (cleanStage.includes('group')) {
-    return 'group-stage';
+  if (cleanStage.includes("group")) {
+    return "group-stage";
   }
 
-  if (cleanStage.includes('last 32') || cleanStage.includes('round of 32')) {
-    return 'round-32';
+  if (
+    cleanStage.includes("last 32") ||
+    cleanStage.includes("round of 32") ||
+    cleanStage.includes("round 32")
+  ) {
+    return "round-32";
   }
 
-  if (cleanStage.includes('last 16') || cleanStage.includes('round of 16')) {
-    return 'round-16';
+  if (
+    cleanStage.includes("last 16") ||
+    cleanStage.includes("round of 16") ||
+    cleanStage.includes("round 16")
+  ) {
+    return "round-16";
   }
 
-  if (cleanStage.includes('quarter')) {
-    return 'quarter-finals';
+  if (cleanStage.includes("quarter final") || cleanStage.includes("quarter")) {
+    return "quarter-finals";
   }
 
-  if (cleanStage.includes('semi')) {
-    return 'semi-finals';
+  if (cleanStage.includes("semi final") || cleanStage.includes("semi")) {
+    return "semi-finals";
   }
 
-  if (cleanStage.includes('third') || cleanStage.includes('final')) {
-    return 'finals';
+  if (cleanStage.includes("third place") || cleanStage.includes("third")) {
+    return "third-place";
   }
 
-  return 'group-stage';
+  if (cleanStage === "final" || cleanStage.includes("final")) {
+    return "finals";
+  }
+
+  return "group-stage";
 }
 
 function getTeamName(team) {
-  return team?.name || team?.shortName || team?.tla || 'Por definir';
+  return team?.name || team?.shortName || team?.tla || "Por definir";
 }
 
 function normalizeMatch(match) {
-  const isFinished = match.status === 'FINISHED';
+  const isFinished = match.status === "FINISHED";
 
   return {
     id: `football-data-${match.id}`,
     externalId: String(match.id),
+    stage: normalizeStage(match.stage),
     stageId: normalizeStage(match.stage),
-group: match.group || match.stage || 'Grupo sin asignar',
-groupName: match.group || match.stage || 'Grupo sin asignar',
-homeTeam: getTeamName(match.homeTeam),
-awayTeam: getTeamName(match.awayTeam),
-date: match.utcDate,
+    group: match.group || match.stage || "Grupo sin asignar",
+    groupName: match.group || match.stage || "Grupo sin asignar",
     homeTeam: getTeamName(match.homeTeam),
     awayTeam: getTeamName(match.awayTeam),
     date: match.utcDate,
-    stadium: match.venue || 'Por definir',
+    stadium: match.venue || "Por definir",
     isLocked: new Date(match.utcDate).getTime() <= Date.now(),
     result: isFinished
       ? {
@@ -85,7 +95,7 @@ date: match.utcDate,
           awayScore: Number(match.score?.fullTime?.away ?? 0),
         }
       : null,
-    source: 'football-data',
+    source: "football-data",
     status: match.status,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   };
@@ -93,16 +103,16 @@ date: match.utcDate,
 
 async function fetchWorldCupMatches() {
   if (!process.env.FOOTBALL_DATA_TOKEN) {
-    throw new Error('MISSING_FOOTBALL_DATA_TOKEN');
+    throw new Error("MISSING_FOOTBALL_DATA_TOKEN");
   }
 
   const response = await fetch(
-    'https://api.football-data.org/v4/competitions/WC/matches?season=2026',
+    "https://api.football-data.org/v4/competitions/WC/matches?season=2026",
     {
       headers: {
-        'X-Auth-Token': process.env.FOOTBALL_DATA_TOKEN,
+        "X-Auth-Token": process.env.FOOTBALL_DATA_TOKEN,
       },
-    }
+    },
   );
 
   if (!response.ok) {
@@ -116,31 +126,31 @@ async function fetchWorldCupMatches() {
 
 function getBearerToken(request) {
   const authorizationHeader =
-    request.headers.authorization || request.headers.Authorization || '';
+    request.headers.authorization || request.headers.Authorization || "";
 
-  if (!authorizationHeader.startsWith('Bearer ')) {
+  if (!authorizationHeader.startsWith("Bearer ")) {
     return null;
   }
 
-  return authorizationHeader.replace('Bearer ', '').trim();
+  return authorizationHeader.replace("Bearer ", "").trim();
 }
 
 async function validateLeagueOwner({ request, db, leagueId }) {
   const token = getBearerToken(request);
 
   if (!token) {
-    const error = new Error('MISSING_AUTH_TOKEN');
+    const error = new Error("MISSING_AUTH_TOKEN");
     error.statusCode = 401;
     throw error;
   }
 
   const decodedToken = await admin.auth().verifyIdToken(token);
 
-  const leagueRef = db.collection('leagues').doc(leagueId);
+  const leagueRef = db.collection("leagues").doc(leagueId);
   const leagueSnapshot = await leagueRef.get();
 
   if (!leagueSnapshot.exists) {
-    const error = new Error('LEAGUE_NOT_FOUND');
+    const error = new Error("LEAGUE_NOT_FOUND");
     error.statusCode = 404;
     throw error;
   }
@@ -148,7 +158,7 @@ async function validateLeagueOwner({ request, db, leagueId }) {
   const league = leagueSnapshot.data();
 
   if (league.ownerId !== decodedToken.uid) {
-    const error = new Error('NOT_LEAGUE_OWNER');
+    const error = new Error("NOT_LEAGUE_OWNER");
     error.statusCode = 403;
     throw error;
   }
@@ -161,10 +171,10 @@ async function validateLeagueOwner({ request, db, leagueId }) {
 
 export default async function handler(request, response) {
   try {
-    if (request.method !== 'POST') {
+    if (request.method !== "POST") {
       return response.status(405).json({
         ok: false,
-        error: 'METHOD_NOT_ALLOWED',
+        error: "METHOD_NOT_ALLOWED",
       });
     }
 
@@ -173,7 +183,7 @@ export default async function handler(request, response) {
     if (!leagueId) {
       return response.status(400).json({
         ok: false,
-        error: 'MISSING_LEAGUE_ID',
+        error: "MISSING_LEAGUE_ID",
       });
     }
 
@@ -196,7 +206,7 @@ export default async function handler(request, response) {
         total: 0,
         finishedMatches: 0,
         pendingMatches: 0,
-        message: 'NO_MATCHES_FOUND',
+        message: "NO_MATCHES_FOUND",
       });
     }
 
@@ -204,9 +214,9 @@ export default async function handler(request, response) {
 
     normalizedMatches.forEach((match) => {
       const matchRef = db
-        .collection('leagues')
+        .collection("leagues")
         .doc(leagueId)
-        .collection('matches')
+        .collection("matches")
         .doc(match.id);
 
       const matchDataToSave = {
@@ -236,11 +246,11 @@ export default async function handler(request, response) {
       pendingMatches: normalizedMatches.length - finishedMatches,
     });
   } catch (error) {
-    console.error('SYNC_FOOTBALL_DATA_FAILED:', error);
+    console.error("SYNC_FOOTBALL_DATA_FAILED:", error);
 
     return response.status(error.statusCode || 500).json({
       ok: false,
-      error: 'SYNC_FOOTBALL_DATA_FAILED',
+      error: "SYNC_FOOTBALL_DATA_FAILED",
       message: error.message,
     });
   }
