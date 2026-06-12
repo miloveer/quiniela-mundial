@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { KeyRound, Plus, UsersRound } from 'lucide-react';
+import { KeyRound, Plus, Search, UsersRound } from 'lucide-react';
 
 import Header from '../components/Header';
 import AppNavigation from '../components/AppNavigation';
@@ -23,6 +23,7 @@ import PrizePreviewCard from '../components/PrizePreviewCard';
 import StageProgressCard from '../components/StageProgressCard';
 import StageStatsBanner from '../components/StageStatsBanner';
 import StageRankingPreviewCard from '../components/StageRankingPreviewCard';
+import GroupStandingsCard from '../components/GroupStandingsCard';
 
 import { getUsersProfilesByIds } from '../services/userService';
 import { syncFootballDataMatches } from '../services/footballDataSyncService';
@@ -76,7 +77,10 @@ import {
 } from '../utils/storageUtils';
 
 import {
+  buildGroupStandings,
+  filterMatchesBySearch,
   filterMatchesByStatus,
+  groupMatchesByGroup,
   getCompletedPredictions,
   getMatchFilterCounts,
   getPendingMatches,
@@ -134,6 +138,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   const [activeSection, setActiveSection] = useState('home');
   const [activeStageId, setActiveStageId] = useState(stages[0].id);
   const [activeMatchFilter, setActiveMatchFilter] = useState('all');
+  const [matchSearchTerm, setMatchSearchTerm] = useState('');
 
   const [isJoinLeagueModalOpen, setIsJoinLeagueModalOpen] = useState(false);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
@@ -196,13 +201,28 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   }, [visibleMatches, activeStageId]);
 
   const filteredStageMatches = useMemo(() => {
-    const filteredMatches = filterMatchesByStatus(
-      stageMatches,
-      activeMatchFilter
-    );
+  const filteredByStatus = filterMatchesByStatus(
+    stageMatches,
+    activeMatchFilter
+  );
 
-    return sortMatchesByStatusAndDate(filteredMatches);
-  }, [stageMatches, activeMatchFilter]);
+  const filteredBySearch = filterMatchesBySearch(
+    filteredByStatus,
+    matchSearchTerm
+  );
+
+  return sortMatchesByStatusAndDate(filteredBySearch);
+}, [stageMatches, activeMatchFilter, matchSearchTerm]);
+
+const groupedStageMatches = useMemo(() => {
+  return groupMatchesByGroup(filteredStageMatches);
+}, [filteredStageMatches]);
+
+const groupStandings = useMemo(() => {
+  return buildGroupStandings(stageMatches);
+}, [stageMatches]);
+
+const isGroupStage = activeStageId === 'group-stage';
 
   const matchFilterCounts = getMatchFilterCounts(stageMatches);
 
@@ -541,6 +561,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       loadLeaguePrizes();
       loadLeagueMembers();
       setActiveMatchFilter('all');
+      setMatchSearchTerm('');
     });
   }, [activeLeagueId, user?.uid]);
 
@@ -1094,6 +1115,10 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
                 <StageStatsBanner stage={activeStage} matches={stageMatches} />
 
+                {isGroupStage && (
+                  <GroupStandingsCard groupStandings={groupStandings} />
+                )}
+
                 <div className="rounded-[2rem] border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
                   <div className="mb-4">
                     <p className="text-sm font-bold text-emerald-700">
@@ -1110,6 +1135,24 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                     onChangeFilter={setActiveMatchFilter}
                     counts={matchFilterCounts}
                   />
+
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <label className="mb-2 block text-xs font-black uppercase tracking-wider text-slate-400">
+                      Buscar partido
+                    </label>
+
+                    <div className="flex items-center gap-2">
+                      <Search size={18} className="text-slate-400" />
+
+                      <input
+                        type="search"
+                        value={matchSearchTerm}
+                        onChange={(event) => setMatchSearchTerm(event.target.value)}
+                        placeholder="Buscar por equipo, estadio o grupo..."
+                        className="w-full bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-slate-400"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 {isLoadingMatches && (
@@ -1124,16 +1167,51 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                   </section>
                 )}
 
-                <section className="grid gap-3 md:grid-cols-2">
-                  {!isLoadingMatches &&
-                    filteredStageMatches.map((match) => (
-                      <MatchCard
-                        key={match.id}
-                        match={match}
-                        onSavePrediction={handleSavePrediction}
-                      />
-                    ))}
-                </section>
+                {!isLoadingMatches && isGroupStage ? (
+                  <section className="space-y-4">
+                    {Object.entries(groupedStageMatches).map(
+                      ([groupLabel, groupMatches]) => (
+                        <article key={groupLabel} className="space-y-3">
+                          <div className="flex items-center justify-between rounded-2xl bg-slate-950 px-4 py-3 text-white">
+                            <div>
+                              <p className="text-xs font-bold uppercase tracking-widest text-emerald-300">
+                                Fase de grupos
+                              </p>
+                              <h3 className="text-lg font-black">
+                                {groupLabel}
+                              </h3>
+                            </div>
+
+                            <p className="rounded-full bg-white/10 px-3 py-1 text-xs font-black">
+                              {groupMatches.length} partidos
+                            </p>
+                          </div>
+
+                          <div className="grid gap-3 md:grid-cols-2">
+                            {groupMatches.map((match) => (
+                              <MatchCard
+                                key={match.id}
+                                match={match}
+                                onSavePrediction={handleSavePrediction}
+                              />
+                            ))}
+                          </div>
+                        </article>
+                      )
+                    )}
+                  </section>
+                ) : (
+                  <section className="grid gap-3 md:grid-cols-2">
+                    {!isLoadingMatches &&
+                      filteredStageMatches.map((match) => (
+                        <MatchCard
+                          key={match.id}
+                          match={match}
+                          onSavePrediction={handleSavePrediction}
+                        />
+                      ))}
+                  </section>
+                )}
 
                 {!isLoadingMatches && filteredStageMatches.length === 0 && (
                   <section className="rounded-[2rem] border border-dashed border-slate-300 bg-white/70 p-6 text-center">

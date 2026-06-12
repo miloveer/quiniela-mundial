@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Check,
   Clock,
@@ -7,28 +7,29 @@ import {
   PencilLine,
   Trophy,
   X,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   formatMatchDate,
   getLockMessage,
   isPredictionLocked,
-} from '../utils/matchUtils';
-import { calculatePredictionPoints } from '../utils/scoreUtils';
+} from "../utils/matchUtils";
+import { calculatePredictionPoints } from "../utils/scoreUtils";
+import { getTeamFlag } from "../utils/teamUtils";
 
 function getMatchStatus({ hasPrediction, hasResult, isLocked, lockMessage }) {
   if (hasResult) {
     return {
-      label: 'Finalizado',
-      classes: 'bg-slate-950 text-white',
+      label: "Finalizado",
+      classes: "bg-slate-950 text-white",
       icon: Trophy,
-      message: 'Resultado oficial cargado',
+      message: "Resultado oficial cargado",
     };
   }
 
   if (isLocked) {
     return {
-      label: 'Cerrado',
-      classes: 'bg-rose-50 text-rose-600',
+      label: "Cerrado",
+      classes: "bg-rose-50 text-rose-600",
       icon: Lock,
       message: lockMessage,
     };
@@ -36,18 +37,18 @@ function getMatchStatus({ hasPrediction, hasResult, isLocked, lockMessage }) {
 
   if (hasPrediction) {
     return {
-      label: 'Pronosticado',
-      classes: 'bg-violet-50 text-violet-700',
+      label: "Pronosticado",
+      classes: "bg-violet-50 text-violet-700",
       icon: Check,
-      message: 'Puedes editar antes de que inicie',
+      message: "Puedes editar antes de que inicie",
     };
   }
 
   return {
-    label: 'Editable',
-    classes: 'bg-emerald-50 text-emerald-700',
+    label: "Editable",
+    classes: "bg-emerald-50 text-emerald-700",
     icon: PencilLine,
-    message: 'Disponible para capturar',
+    message: "Disponible para capturar",
   };
 }
 
@@ -57,6 +58,8 @@ function MatchCard({ match, onSavePrediction }) {
   const isLocked = match.isLocked || isPredictionLocked(match.date);
   const lockMessage = getLockMessage(match.date);
   const points = calculatePredictionPoints(match.userPrediction, match.result);
+  const homeTeamFlag = getTeamFlag(match.homeTeam);
+  const awayTeamFlag = getTeamFlag(match.awayTeam);
 
   const status = getMatchStatus({
     hasPrediction,
@@ -68,27 +71,27 @@ function MatchCard({ match, onSavePrediction }) {
   const StatusIcon = status.icon;
 
   const [isEditing, setIsEditing] = useState(false);
-  const [homeScore, setHomeScore] = useState('');
-  const [awayScore, setAwayScore] = useState('');
+  const [homeScore, setHomeScore] = useState("");
+  const [awayScore, setAwayScore] = useState("");
 
   function handleStartEditing() {
     if (isLocked || hasResult) {
       alert(
         hasResult
-          ? 'Este partido ya tiene resultado oficial.'
-          : 'Este partido ya está bloqueado.'
+          ? "Este partido ya tiene resultado oficial."
+          : "Este partido ya está bloqueado.",
       );
       return;
     }
 
-    setHomeScore(match.userPrediction?.homeScore ?? '');
-    setAwayScore(match.userPrediction?.awayScore ?? '');
+    setHomeScore(match.userPrediction?.homeScore ?? "");
+    setAwayScore(match.userPrediction?.awayScore ?? "");
     setIsEditing(true);
   }
 
   function handleCancelEditing() {
-    setHomeScore('');
-    setAwayScore('');
+    setHomeScore("");
+    setAwayScore("");
     setIsEditing(false);
   }
 
@@ -96,15 +99,15 @@ function MatchCard({ match, onSavePrediction }) {
     if (isLocked || hasResult) {
       alert(
         hasResult
-          ? 'Este partido ya tiene resultado oficial.'
-          : 'Este partido ya está bloqueado.'
+          ? "Este partido ya tiene resultado oficial."
+          : "Este partido ya está bloqueado.",
       );
       setIsEditing(false);
       return;
     }
 
-    if (homeScore === '' || awayScore === '') {
-      alert('Debes capturar ambos marcadores.');
+    if (homeScore === "" || awayScore === "") {
+      alert("Debes capturar ambos marcadores.");
       return;
     }
 
@@ -117,7 +120,7 @@ function MatchCard({ match, onSavePrediction }) {
       parsedHomeScore < 0 ||
       parsedAwayScore < 0
     ) {
-      alert('Los marcadores deben ser números válidos mayores o iguales a 0.');
+      alert("Los marcadores deben ser números válidos mayores o iguales a 0.");
       return;
     }
 
@@ -127,8 +130,8 @@ function MatchCard({ match, onSavePrediction }) {
     });
 
     setIsEditing(false);
-    setHomeScore('');
-    setAwayScore('');
+    setHomeScore("");
+    setAwayScore("");
   }
 
   return (
@@ -155,7 +158,8 @@ function MatchCard({ match, onSavePrediction }) {
       </div>
 
       <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-2 sm:gap-3">
-        <div className="flex min-h-16 items-center justify-center rounded-2xl bg-slate-50 p-3 text-center">
+        <div className="space-y-1">
+          <p className="text-2xl">{homeTeamFlag}</p>
           <p className="break-words text-sm font-black leading-tight text-slate-950 sm:text-base">
             {match.homeTeam}
           </p>
@@ -165,7 +169,8 @@ function MatchCard({ match, onSavePrediction }) {
           VS
         </div>
 
-        <div className="flex min-h-16 items-center justify-center rounded-2xl bg-slate-50 p-3 text-center">
+        <div className="space-y-1">
+          <p className="text-2xl">{awayTeamFlag}</p>
           <p className="break-words text-sm font-black leading-tight text-slate-950 sm:text-base">
             {match.awayTeam}
           </p>
@@ -192,9 +197,7 @@ function MatchCard({ match, onSavePrediction }) {
             {hasPrediction && (
               <div className="rounded-2xl bg-white/10 px-3 py-2 text-right">
                 <p className="text-xs font-bold text-slate-400">Tus puntos</p>
-                <p className="text-xl font-black text-emerald-300">
-                  +{points}
-                </p>
+                <p className="text-xl font-black text-emerald-300">+{points}</p>
               </div>
             )}
           </div>
@@ -270,7 +273,7 @@ function MatchCard({ match, onSavePrediction }) {
               <p className="text-xs font-bold text-slate-400">Tu marcador</p>
 
               <p className="text-2xl font-black text-slate-950">
-                {match.userPrediction.homeScore} -{' '}
+                {match.userPrediction.homeScore} -{" "}
                 {match.userPrediction.awayScore}
               </p>
 
@@ -287,8 +290,8 @@ function MatchCard({ match, onSavePrediction }) {
               onClick={handleStartEditing}
               className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-xs font-black sm:w-auto ${
                 isLocked || hasResult
-                  ? 'cursor-not-allowed bg-slate-200 text-slate-400'
-                  : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                  ? "cursor-not-allowed bg-slate-200 text-slate-400"
+                  : "bg-emerald-600 text-white hover:bg-emerald-700"
               }`}
             >
               {isLocked || hasResult ? (
@@ -296,7 +299,7 @@ function MatchCard({ match, onSavePrediction }) {
               ) : (
                 <PencilLine size={16} />
               )}
-              {isLocked || hasResult ? 'Cerrado' : 'Editar'}
+              {isLocked || hasResult ? "Cerrado" : "Editar"}
             </button>
           </div>
         ) : (
@@ -315,11 +318,11 @@ function MatchCard({ match, onSavePrediction }) {
               onClick={handleStartEditing}
               className={`min-h-11 w-full rounded-2xl px-4 py-3 text-xs font-black sm:w-auto ${
                 isLocked || hasResult
-                  ? 'cursor-not-allowed bg-slate-200 text-slate-400'
-                  : 'bg-slate-950 text-white hover:bg-slate-800'
+                  ? "cursor-not-allowed bg-slate-200 text-slate-400"
+                  : "bg-slate-950 text-white hover:bg-slate-800"
               }`}
             >
-              {isLocked || hasResult ? 'Cerrado' : 'Llenar'}
+              {isLocked || hasResult ? "Cerrado" : "Llenar"}
             </button>
           </div>
         )}
