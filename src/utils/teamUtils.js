@@ -22,8 +22,8 @@ const TEAM_FLAGS = {
   spain: '🇪🇸',
   france: '🇫🇷',
   germany: '🇩🇪',
-  england: '🏴',
-  scotland: '🏴',
+  england: 'en🇬🇧',
+  scotland: 'sc🇬🇧',
   wales: '🏴',
   portugal: '🇵🇹',
   italy: '🇮🇹',
@@ -123,7 +123,7 @@ const TEAM_TRANSLATIONS = {
   mexico: 'México',
   'united states': 'Estados Unidos',
   usa: 'Estados Unidos',
-  'united states of america': 'Estados Unidos',
+  united states: 'Estados Unidos',
   canada: 'Canadá',
 
   // Sudamérica
