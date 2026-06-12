@@ -9,6 +9,7 @@ const TEAM_FLAGS = {
   // Sudamérica
   argentina: '🇦🇷',
   brazil: '🇧🇷',
+  brasil: '🇧🇷',
   uruguay: '🇺🇾',
   colombia: '🇨🇴',
   ecuador: '🇪🇨',
@@ -22,8 +23,8 @@ const TEAM_FLAGS = {
   spain: '🇪🇸',
   france: '🇫🇷',
   germany: '🇩🇪',
-  england: 'en🇬🇧',
-  scotland: 'sc🇬🇧',
+  england: '🏴',
+  scotland: '🏴',
   wales: '🏴',
   portugal: '🇵🇹',
   italy: '🇮🇹',
@@ -123,12 +124,13 @@ const TEAM_TRANSLATIONS = {
   mexico: 'México',
   'united states': 'Estados Unidos',
   usa: 'Estados Unidos',
-  united states: 'Estados Unidos',
+  'united states of america': 'Estados Unidos',
   canada: 'Canadá',
 
   // Sudamérica
   argentina: 'Argentina',
   brazil: 'Brasil',
+  brasil: 'Brasil',
   uruguay: 'Uruguay',
   colombia: 'Colombia',
   ecuador: 'Ecuador',
