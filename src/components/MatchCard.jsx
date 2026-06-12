@@ -14,7 +14,7 @@ import {
   isPredictionLocked,
 } from "../utils/matchUtils";
 import { calculatePredictionPoints } from "../utils/scoreUtils";
-import { getTeamFlag } from "../utils/teamUtils";
+import { getTeamDisplayName, getTeamFlag } from '../utils/teamUtils';
 
 function getMatchStatus({ hasPrediction, hasResult, isLocked, lockMessage }) {
   if (hasResult) {
@@ -59,7 +59,9 @@ function MatchCard({ match, onSavePrediction }) {
   const lockMessage = getLockMessage(match.date);
   const points = calculatePredictionPoints(match.userPrediction, match.result);
   const homeTeamFlag = getTeamFlag(match.homeTeam);
-  const awayTeamFlag = getTeamFlag(match.awayTeam);
+const awayTeamFlag = getTeamFlag(match.awayTeam);
+const homeTeamName = getTeamDisplayName(match.homeTeam);
+const awayTeamName = getTeamDisplayName(match.awayTeam);
 
   const status = getMatchStatus({
     hasPrediction,
@@ -161,7 +163,7 @@ function MatchCard({ match, onSavePrediction }) {
         <div className="space-y-1">
           <p className="text-2xl">{homeTeamFlag}</p>
           <p className="break-words text-sm font-black leading-tight text-slate-950 sm:text-base">
-            {match.homeTeam}
+            {homeTeamName}
           </p>
         </div>
 
@@ -214,7 +216,7 @@ function MatchCard({ match, onSavePrediction }) {
             <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-3">
               <label className="block">
                 <span className="mb-1 block truncate text-center text-[11px] font-black text-slate-400">
-                  {match.homeTeam}
+                  {homeTeamName}
                 </span>
 
                 <input
@@ -232,7 +234,7 @@ function MatchCard({ match, onSavePrediction }) {
 
               <label className="block">
                 <span className="mb-1 block truncate text-center text-[11px] font-black text-slate-400">
-                  {match.awayTeam}
+                  {awayTeamName}
                 </span>
 
                 <input

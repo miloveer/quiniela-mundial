@@ -1,3 +1,6 @@
+import {getTeamDisplayName} from './teamUtils';
+
+
 export function formatMatchDate(dateValue) {
   const date = new Date(dateValue);
 
@@ -97,18 +100,20 @@ export function filterMatchesBySearch(matches = [], searchTerm = '') {
 
   return matches.filter((match) => {
     const searchableText = normalizeSearchText(
-      [
-        match.homeTeam,
-        match.awayTeam,
-        match.stadium,
-        match.group,
-        match.groupName,
-        match.stage,
-        match.stageId,
-      ]
-        .filter(Boolean)
-        .join(' ')
-    );
+  [
+    match.homeTeam,
+    match.awayTeam,
+    getTeamDisplayName(match.homeTeam),
+    getTeamDisplayName(match.awayTeam),
+    match.stadium,
+    match.group,
+    match.groupName,
+    match.stage,
+    match.stageId,
+  ]
+    .filter(Boolean)
+    .join(' ')
+);
 
     return searchableText.includes(normalizedSearchTerm);
   });
