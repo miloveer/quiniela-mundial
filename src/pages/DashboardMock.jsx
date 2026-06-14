@@ -421,7 +421,7 @@ const stageTotalMatches = stageMatches.length;
     }
   }
 async function handleMemberSyncMatches() {
-  if (!activeLeagueId) {
+  if (!activeLeagueId || activeLeagueId === 'default') {
     alert('Primero entra a una liga.');
     return;
   }
@@ -433,7 +433,8 @@ async function handleMemberSyncMatches() {
       leagueId: activeLeagueId,
     });
 
-    await loadLeagueMatches(activeLeagueId);
+    await loadLeagueMatches();
+    await loadLeaguePredictions();
 
     alert(result.message || 'Resultados actualizados correctamente.');
   } catch (error) {
@@ -1141,31 +1142,7 @@ async function handleMemberSyncMatches() {
                   />
                 </div>
 
-                <section className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
-  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-    <div>
-      <p className="text-sm font-black text-emerald-700">
-        Resultados oficiales
-      </p>
-
-      <p className="mt-1 text-sm font-bold text-slate-500">
-        Cualquier participante puede actualizar los resultados cuando haya
-        partidos finalizados.
-      </p>
-    </div>
-
-    <button
-      type="button"
-      onClick={handleMemberSyncMatches}
-      disabled={isMemberSyncingMatches}
-      className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-    >
-      {isMemberSyncingMatches
-        ? 'Actualizando...'
-        : 'Actualizar resultados'}
-    </button>
-  </div>
-</section>
+                
                 <StageStatsBanner stage={activeStage} matches={stageMatches} />
                 <section className="rounded-[1.5rem] border border-emerald-100 bg-emerald-50 p-4 shadow-sm">
   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1320,20 +1297,52 @@ async function handleMemberSyncMatches() {
                 onCreateLeague={() => setIsCreateLeagueModalOpen(true)}
               />
             ) : (
-              <section className="grid gap-4 lg:grid-cols-2">
-                <RankingCard
-                  ranking={ranking}
-                  currentUserName={currentUserName}
-                  title="Ranking general"
-                  subtitle="Tabla acumulada"
-                />
+              <section className="space-y-4">
+                <section className="rounded-[1.5rem] border border-emerald-100 bg-emerald-50 p-4 shadow-sm">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-black text-emerald-700">
+                        Actualizar ranking
+                      </p>
 
-                <RankingCard
-                  ranking={stageRanking}
-                  currentUserName={currentUserName}
-                  title={`Ranking ${activeStage?.label}`}
-                  subtitle={activeStage?.fullName}
-                />
+                      <h3 className="mt-1 text-xl font-black text-slate-950">
+                        Revisa resultados oficiales y recalcula posiciones
+                      </h3>
+
+                      <p className="mt-1 text-sm font-bold text-slate-500">
+                        Cualquier participante puede actualizar los resultados
+                        para ver cómo va la tabla después de cada partido.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleMemberSyncMatches}
+                      disabled={isMemberSyncingMatches}
+                      className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                    >
+                      {isMemberSyncingMatches
+                        ? 'Actualizando...'
+                        : 'Actualizar resultados'}
+                    </button>
+                  </div>
+                </section>
+
+                <section className="grid gap-4 lg:grid-cols-2">
+                  <RankingCard
+                    ranking={ranking}
+                    currentUserName={currentUserName}
+                    title="Ranking general"
+                    subtitle="Tabla acumulada"
+                  />
+
+                  <RankingCard
+                    ranking={stageRanking}
+                    currentUserName={currentUserName}
+                    title={`Ranking ${activeStage?.label}`}
+                    subtitle={activeStage?.fullName}
+                  />
+                </section>
               </section>
             )}
           </>
