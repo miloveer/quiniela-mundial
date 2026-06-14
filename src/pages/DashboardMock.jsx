@@ -26,7 +26,7 @@ import StageRankingPreviewCard from '../components/StageRankingPreviewCard';
 import GroupStandingsCard from '../components/GroupStandingsCard';
 
 import { getUsersProfilesByIds } from '../services/userService';
-import { syncFootballDataMatches } from '../services/footballDataSyncService';
+import { syncFootballDataMatches, memberSyncFootballDataMatches, } from '../services/footballDataSyncService';
 
 import {
   createLeague,
@@ -138,6 +138,7 @@ function EmptyLeagueState({ onJoinLeague, onCreateLeague }) {
 function DashboardMock({ user, onLogout, onUpdateUser }) {
   const [activeSection, setActiveSection] = useState('home');
   const [activeStageId, setActiveStageId] = useState(stages[0].id);
+  const [isMemberSyncingMatches, setIsMemberSyncingMatches] = useState(false);
   const [activeMatchFilter, setActiveMatchFilter] = useState('all');
   const [matchSearchTerm, setMatchSearchTerm] = useState('');
 
@@ -419,6 +420,28 @@ const stageTotalMatches = stageMatches.length;
       setLeagueMembers([]);
     }
   }
+async function handleMemberSyncMatches() {
+  if (!activeLeagueId) {
+    alert('Primero entra a una liga.');
+    return;
+  }
+
+  try {
+    setIsMemberSyncingMatches(true);
+
+    const result = await memberSyncFootballDataMatches({
+      leagueId: activeLeagueId,
+    });
+
+    await loadLeagueMatches(activeLeagueId);
+
+    alert(result.message || 'Resultados actualizados correctamente.');
+  } catch (error) {
+    alert(error.message || 'No se pudieron actualizar los resultados.');
+  } finally {
+    setIsMemberSyncingMatches(false);
+  }
+}
 
   async function loadLeaguePredictions() {
     if (!activeLeagueId || activeLeagueId === 'default') {
@@ -1118,6 +1141,31 @@ const stageTotalMatches = stageMatches.length;
                   />
                 </div>
 
+                <section className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
+  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <p className="text-sm font-black text-emerald-700">
+        Resultados oficiales
+      </p>
+
+      <p className="mt-1 text-sm font-bold text-slate-500">
+        Cualquier participante puede actualizar los resultados cuando haya
+        partidos finalizados.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      onClick={handleMemberSyncMatches}
+      disabled={isMemberSyncingMatches}
+      className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+    >
+      {isMemberSyncingMatches
+        ? 'Actualizando...'
+        : 'Actualizar resultados'}
+    </button>
+  </div>
+</section>
                 <StageStatsBanner stage={activeStage} matches={stageMatches} />
                 <section className="rounded-[1.5rem] border border-emerald-100 bg-emerald-50 p-4 shadow-sm">
   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
