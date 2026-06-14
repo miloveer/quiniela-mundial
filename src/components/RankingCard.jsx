@@ -1,19 +1,11 @@
 import { Medal, Target, Trophy } from 'lucide-react';
 
 function getRankBadge(index) {
-  if (index === 0) {
-    return '🥇';
-  }
+  if (index === 0) return '🥇';
+  if (index === 1) return '🥈';
+  if (index === 2) return '🥉';
 
-  if (index === 1) {
-    return '🥈';
-  }
-
-  if (index === 2) {
-    return '🥉';
-  }
-
-  return `#${index + 1}`;
+  return index + 1;
 }
 
 function RankingCard({
@@ -28,7 +20,9 @@ function RankingCard({
         <div>
           <p className="text-sm font-bold text-emerald-700">{subtitle}</p>
 
-          <h2 className="text-xl font-black text-slate-950 sm:text-2xl">{title}</h2>
+          <h2 className="text-xl font-black text-slate-950 sm:text-2xl">
+            {title}
+          </h2>
         </div>
 
         <div className="rounded-2xl bg-amber-50 p-3 text-amber-600">
@@ -48,102 +42,63 @@ function RankingCard({
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {ranking.map((user, index) => {
-            const isCurrentUser =
-              user.name?.toLowerCase() === currentUserName?.toLowerCase();
+        <div className="overflow-hidden rounded-2xl border border-slate-200">
+          <div className="grid grid-cols-[42px_1fr_54px_54px_54px] bg-slate-950 px-3 py-3 text-[10px] font-black uppercase tracking-wider text-slate-300 sm:grid-cols-[52px_1fr_70px_70px_70px] sm:text-xs">
+            <div>#</div>
+            <div>Participante</div>
+            <div className="text-center">Pts</div>
+            <div className="text-center">Exactos</div>
+            <div className="text-center">Aciertos</div>
+          </div>
 
-            return (
-              <article
-                key={user.id || user.uid || user.name}
-                className={`rounded-2xl border p-3 transition sm:p-4 ${
-                  isCurrentUser
-                    ? 'border-emerald-300 bg-emerald-50'
-                    : 'border-slate-200 bg-slate-50'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <div
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-sm font-black sm:h-11 sm:w-11 ${
-                        index === 0
-                          ? 'bg-amber-400 text-slate-950'
-                          : index === 1
-                            ? 'bg-slate-300 text-slate-950'
-                            : index === 2
-                              ? 'bg-orange-300 text-slate-950'
-                              : 'bg-white text-slate-500'
-                      }`}
-                    >
-                      {getRankBadge(index)}
-                    </div>
+          <div className="max-h-[520px] overflow-y-auto divide-y divide-slate-100">
+            {ranking.map((user, index) => {
+              const isCurrentUser =
+                user.name?.toLowerCase() === currentUserName?.toLowerCase();
 
-                    <div className="min-w-0">
-                      <p className="truncate font-black text-slate-950">
-                        {user.name}
-                      </p>
-
-                      <p className="mt-1 text-xs font-bold text-slate-400">
-                        {isCurrentUser ? 'Tú' : user.badge || 'Participante'}
-                      </p>
-                    </div>
+              return (
+                <article
+                  key={user.id || user.uid || user.name}
+                  className={`grid grid-cols-[42px_1fr_54px_54px_54px] items-center px-3 py-3 text-sm sm:grid-cols-[52px_1fr_70px_70px_70px] ${
+                    isCurrentUser ? 'bg-emerald-50' : 'bg-white'
+                  }`}
+                >
+                  <div className="font-black text-slate-700">
+                    {getRankBadge(index)}
                   </div>
 
-                  <div className="text-right">
-                    <p className="text-xl font-black text-slate-950 sm:text-2xl">
+                  <div className="min-w-0">
+                    <p className="truncate font-black text-slate-950">
+                      {user.name}
+                    </p>
+
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 sm:text-xs">
+                      {isCurrentUser ? 'Tú' : user.badge || 'Participante'}
+                    </p>
+                  </div>
+
+                  <div className="text-center">
+                    <p className="text-base font-black text-emerald-700 sm:text-lg">
                       {user.points || 0}
-</p>
-
-                    <p className="text-xs font-bold text-slate-400">pts</p>
-                  </div>
-                </div>
-
-                <div className="mt-3 grid grid-cols-3 gap-1.5 sm:gap-2">
-                  <div className="rounded-2xl bg-white p-2 text-center sm:p-3">
-                    <div className="mb-1 flex justify-center text-emerald-600">
-                      <Target size={16} />
-                    </div>
-
-                    <p className="text-sm font-black text-slate-950">
-                      {user.resultHits || 0}
-                    </p>
-
-                    <p className="text-[10px] font-bold text-slate-400 sm:text-[11px]">
-                      Aciertos
                     </p>
                   </div>
 
-                  <div className="rounded-2xl bg-white p-3 text-center">
-                    <div className="mb-1 flex justify-center text-amber-600">
-                      <Medal size={16} />
-                    </div>
-
-                    <p className="text-sm font-black text-slate-950">
-                      {user.exactScores || 0}
-                    </p>
-
-                    <p className="text-[11px] font-bold text-slate-400">
-                      Exactos
-                    </p>
+                  <div className="flex items-center justify-center gap-1 text-center font-black text-slate-700">
+                    <Medal size={14} className="hidden text-amber-600 sm:block" />
+                    {user.exactScores || 0}
                   </div>
 
-                  <div className="rounded-2xl bg-white p-3 text-center">
-                    <p className="mb-1 text-xs font-black text-violet-600">
-                      1X2
-                    </p>
-
-                    <p className="text-sm font-black text-slate-950">
-                      {user.predictionsCount || 0}
-                    </p>
-
-                    <p className="text-[11px] font-bold text-slate-400">
-                      Jugados
-                    </p>
+                  <div className="flex items-center justify-center gap-1 text-center font-black text-slate-700">
+                    <Target
+                      size={14}
+                      className="hidden text-violet-600 sm:block"
+                    />
+                    {user.resultHits || 0}
                   </div>
-                </div>
-              </article>
-            );
-          })}
+                </article>
+              );
+            })}
+          </div>
         </div>
       )}
     </section>
