@@ -89,6 +89,7 @@ import {
   sortMatchesByStatusAndDate,
 } from '../utils/matchUtils';
 
+
 function cleanBaseMatches(matches = []) {
   return matches.map((match) => ({
     ...match,
@@ -225,6 +226,10 @@ const groupStandings = useMemo(() => {
 const isGroupStage = activeStageId === 'group-stage';
 
   const matchFilterCounts = getMatchFilterCounts(stageMatches);
+  const stageCompletedPredictions = getCompletedPredictions(stageMatches);
+const stagePendingMatches = getPendingMatches(stageMatches);
+const stageTotalMatches = stageMatches.length;
+
 
   const completedPredictions = getCompletedPredictions(visibleMatches);
   const pendingMatches = getPendingMatches(visibleMatches);
@@ -1114,6 +1119,36 @@ const isGroupStage = activeStageId === 'group-stage';
                 </div>
 
                 <StageStatsBanner stage={activeStage} matches={stageMatches} />
+                <section className="rounded-[1.5rem] border border-emerald-100 bg-emerald-50 p-4 shadow-sm">
+  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <p className="text-sm font-black text-emerald-700">
+        Avance de tus pronósticos
+      </p>
+
+      <h3 className="mt-1 text-2xl font-black text-slate-950">
+        {stageCompletedPredictions} de {stageTotalMatches} partidos llenados
+      </h3>
+
+      <p className="mt-1 text-sm font-bold text-slate-500">
+        Te faltan {stagePendingMatches} partidos por capturar en esta etapa.
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-white px-4 py-3 text-center shadow-sm">
+      <p className="text-xs font-black uppercase tracking-widest text-slate-400">
+        Progreso
+      </p>
+
+      <p className="text-2xl font-black text-emerald-700">
+        {stageTotalMatches > 0
+          ? Math.round((stageCompletedPredictions / stageTotalMatches) * 100)
+          : 0}
+        %
+      </p>
+    </div>
+  </div>
+</section>
 
                 {isGroupStage && (
                   <GroupStandingsCard groupStandings={groupStandings} />
