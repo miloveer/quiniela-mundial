@@ -299,3 +299,65 @@ export function buildGroupStandings(matches = []) {
     {}
   );
 }
+export function isSameLocalDay(dateA, dateB) {
+  const firstDate = new Date(dateA);
+  const secondDate = new Date(dateB);
+
+  return (
+    firstDate.getFullYear() === secondDate.getFullYear() &&
+    firstDate.getMonth() === secondDate.getMonth() &&
+    firstDate.getDate() === secondDate.getDate()
+  );
+}
+
+export function getMatchDayStatus(matchDate) {
+  const now = new Date();
+  const matchLocalDate = new Date(matchDate);
+
+  if (isSameLocalDay(matchLocalDate, now)) {
+    return 'today';
+  }
+
+  if (matchLocalDate.getTime() > now.getTime()) {
+    return 'upcoming';
+  }
+
+  return 'past';
+}
+
+export function sortMatchesTodayFirst(matches = []) {
+  const priority = {
+    today: 0,
+    upcoming: 1,
+    past: 2,
+  };
+
+  return [...matches].sort((firstMatch, secondMatch) => {
+    const firstPriority = priority[getMatchDayStatus(firstMatch.date)];
+    const secondPriority = priority[getMatchDayStatus(secondMatch.date)];
+
+    if (firstPriority !== secondPriority) {
+      return firstPriority - secondPriority;
+    }
+
+    return new Date(firstMatch.date).getTime() - new Date(secondMatch.date).getTime();
+  });
+}
+
+export function groupMatchesByDayStatus(matches = []) {
+  return matches.reduce(
+    (accumulator, match) => {
+      const status = getMatchDayStatus(match.date);
+
+      return {
+        ...accumulator,
+        [status]: [...accumulator[status], match],
+      };
+    },
+    {
+      today: [],
+      upcoming: [],
+      past: [],
+    }
+  );
+}

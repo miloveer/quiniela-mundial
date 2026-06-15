@@ -80,6 +80,8 @@ import {
   buildGroupStandings,
   filterMatchesBySearch,
   filterMatchesByStatus,
+  groupMatchesByDayStatus,
+  sortMatchesTodayFirst,
   groupMatchesByGroup,
   getCompletedPredictions,
   getMatchFilterCounts,
@@ -201,7 +203,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     return getStageMatches(visibleMatches, activeStageId);
   }, [visibleMatches, activeStageId]);
 
-  const filteredStageMatches = useMemo(() => {
+ const filteredStageMatches = useMemo(() => {
   const filteredByStatus = filterMatchesByStatus(
     stageMatches,
     activeMatchFilter
@@ -212,11 +214,14 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     matchSearchTerm
   );
 
-  return sortMatchesByStatusAndDate(filteredBySearch);
+  return sortMatchesTodayFirst(filteredBySearch);
 }, [stageMatches, activeMatchFilter, matchSearchTerm]);
 
 const groupedStageMatches = useMemo(() => {
   return groupMatchesByGroup(filteredStageMatches);
+}, [filteredStageMatches]);
+const groupedMatchesByDayStatus = useMemo(() => {
+  return groupMatchesByDayStatus(filteredStageMatches);
 }, [filteredStageMatches]);
 
 const groupStandings = useMemo(() => {
@@ -1241,16 +1246,79 @@ const stageTotalMatches = stageMatches.length;
                     )}
                   </section>
                 ) : (
-                  <section className="grid gap-3 md:grid-cols-2">
-                    {!isLoadingMatches &&
-                      filteredStageMatches.map((match) => (
-                        <MatchCard
-                          key={match.id}
-                          match={match}
-                          onSavePrediction={handleSavePrediction}
-                        />
-                      ))}
-                  </section>
+                  <section className="space-y-5">
+  {groupedMatchesByDayStatus.today.length > 0 && (
+    <section className="space-y-3">
+      <div className="rounded-2xl bg-emerald-600 px-4 py-3 text-white">
+        <p className="text-xs font-black uppercase tracking-widest text-emerald-100">
+          Partidos de hoy
+        </p>
+
+        <h3 className="text-lg font-black">
+          Hoy se juegan {groupedMatchesByDayStatus.today.length} partidos
+        </h3>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {groupedMatchesByDayStatus.today.map((match) => (
+          <MatchCard
+            key={match.id}
+            match={match}
+            onSavePrediction={handleSavePrediction}
+          />
+        ))}
+      </div>
+    </section>
+  )}
+
+  {groupedMatchesByDayStatus.upcoming.length > 0 && (
+    <section className="space-y-3">
+      <div className="rounded-2xl bg-white px-4 py-3 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-widest text-slate-400">
+          Próximos partidos
+        </p>
+
+        <h3 className="text-lg font-black text-slate-950">
+          Calendario pendiente
+        </h3>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {groupedMatchesByDayStatus.upcoming.map((match) => (
+          <MatchCard
+            key={match.id}
+            match={match}
+            onSavePrediction={handleSavePrediction}
+          />
+        ))}
+      </div>
+    </section>
+  )}
+
+  {groupedMatchesByDayStatus.past.length > 0 && (
+    <section className="space-y-3">
+      <div className="rounded-2xl bg-slate-950 px-4 py-3 text-white">
+        <p className="text-xs font-black uppercase tracking-widest text-slate-400">
+          Partidos anteriores
+        </p>
+
+        <h3 className="text-lg font-black">
+          Resultados y pronósticos pasados
+        </h3>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {groupedMatchesByDayStatus.past.map((match) => (
+          <MatchCard
+            key={match.id}
+            match={match}
+            onSavePrediction={handleSavePrediction}
+          />
+        ))}
+      </div>
+    </section>
+  )}
+</section>
                 )}
 
                 {!isLoadingMatches && filteredStageMatches.length === 0 && (
