@@ -181,6 +181,9 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   const [activeMatchFilter, setActiveMatchFilter] = useState('all');
   const [matchSearchTerm, setMatchSearchTerm] = useState('');
   const [activeStandingsGroup, setActiveStandingsGroup] = useState('');
+  const [activePredictionsGroup, setActivePredictionsGroup] = useState('');
+  
+  
 
   const [isJoinLeagueModalOpen, setIsJoinLeagueModalOpen] = useState(false);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
@@ -267,45 +270,60 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   const standingsGroupLabels = useMemo(() => {
     return Object.keys(groupStandings);
   }, [groupStandings]);
-const safeActiveStandingsGroup = useMemo(() => {
-  if (
-    activeStandingsGroup &&
-    standingsGroupLabels.includes(activeStandingsGroup)
-  ) {
-    return activeStandingsGroup;
-  }
 
-  return standingsGroupLabels[0] || '';
-}, [activeStandingsGroup, standingsGroupLabels]);
+  const safeActiveStandingsGroup = useMemo(() => {
+    if (
+      activeStandingsGroup &&
+      standingsGroupLabels.includes(activeStandingsGroup)
+    ) {
+      return activeStandingsGroup;
+    }
+
+    return standingsGroupLabels[0] || '';
+  }, [activeStandingsGroup, standingsGroupLabels]);
+
+  const safeActivePredictionsGroup = useMemo(() => {
+    if (
+      activePredictionsGroup &&
+      standingsGroupLabels.includes(activePredictionsGroup)
+    ) {
+      return activePredictionsGroup;
+    }
+
+    return standingsGroupLabels[0] || '';
+  }, [activePredictionsGroup, standingsGroupLabels]);
 
   const selectedGroupStandings = useMemo(() => {
-  if (!safeActiveStandingsGroup || !groupStandings[safeActiveStandingsGroup]) {
-    return {};
-  }
+    if (!safeActiveStandingsGroup || !groupStandings[safeActiveStandingsGroup]) {
+      return {};
+    }
 
-  return {
-    [safeActiveStandingsGroup]: groupStandings[safeActiveStandingsGroup],
-  };
-}, [safeActiveStandingsGroup, groupStandings]);
+    return {
+      [safeActiveStandingsGroup]: groupStandings[safeActiveStandingsGroup],
+    };
+  }, [safeActiveStandingsGroup, groupStandings]);
 
   const isGroupStage = activeStageId === 'group-stage';
 
   const selectedGroupMatches = useMemo(() => {
-  if (!isGroupStage) {
-    return filteredStageMatches;
-  }
+    if (!isGroupStage) {
+      return filteredStageMatches;
+    }
 
-  if (!safeActiveStandingsGroup || !groupedStageMatches[safeActiveStandingsGroup]) {
-    return [];
-  }
+    if (
+      !safeActivePredictionsGroup ||
+      !groupedStageMatches[safeActivePredictionsGroup]
+    ) {
+      return [];
+    }
 
-  return groupedStageMatches[safeActiveStandingsGroup];
-}, [
-  isGroupStage,
-  filteredStageMatches,
-  groupedStageMatches,
-  safeActiveStandingsGroup,
-]);
+    return groupedStageMatches[safeActivePredictionsGroup];
+  }, [
+    isGroupStage,
+    filteredStageMatches,
+    groupedStageMatches,
+    safeActivePredictionsGroup,
+  ]);
 
   const matchFilterCounts = getMatchFilterCounts(stageMatches);
   const stageCompletedPredictions = getCompletedPredictions(stageMatches);
@@ -1305,12 +1323,10 @@ const safeActiveStandingsGroup = useMemo(() => {
                       </div>
 
                       <select
-                        value={safeActiveStandingsGroup}
-                        onChange={(event) =>
-                          setActiveStandingsGroup(event.target.value)
-                        }
-                        className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-black text-slate-700 outline-none focus:border-emerald-400"
-                      >
+  value={safeActiveStandingsGroup}
+  onChange={(event) => setActiveStandingsGroup(event.target.value)}
+  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-black text-slate-700 outline-none focus:border-emerald-400"
+>
                         {standingsGroupLabels.map((groupLabel) => (
                           <option key={groupLabel} value={groupLabel}>
                             {groupLabel}
@@ -1372,35 +1388,53 @@ const safeActiveStandingsGroup = useMemo(() => {
                 )}
 
                 {!isLoadingMatches && isGroupStage ? (
-                  <section className="rounded-[1.5rem] border border-slate-200 bg-white p-3 shadow-sm">
-                    <div className="mb-3 flex items-center justify-between rounded-2xl bg-slate-950 px-4 py-3 text-white">
-                      <div>
-                        <p className="text-xs font-bold uppercase tracking-widest text-emerald-300">
-                          Tus pronósticos
-                        </p>
+  <section className="rounded-[1.5rem] border border-slate-200 bg-white p-3 shadow-sm">
+    <div className="mb-3 flex flex-col gap-3 rounded-2xl bg-slate-950 px-4 py-3 text-white sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p className="text-xs font-bold uppercase tracking-widest text-emerald-300">
+          Tus pronósticos
+        </p>
 
-                        <h3 className="text-lg font-black">
-                          {safeActiveStandingsGroup}
-                        </h3>
-                      </div>
+        <h3 className="text-lg font-black">
+          {safeActivePredictionsGroup}
+        </h3>
 
-                      <p className="rounded-full bg-white/10 px-3 py-1 text-xs font-black">
-                        {selectedGroupMatches.length} partidos
-                      </p>
-                    </div>
+        <p className="mt-1 text-xs font-bold text-slate-400">
+          Selecciona el grupo que quieres llenar o revisar.
+        </p>
+      </div>
 
-                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                      {selectedGroupMatches.map((match) => (
-                        <CompactMatchCard
-                          key={match.id}
-                          match={match}
-                          onSavePrediction={handleSavePrediction}
-                        />
-                      ))}
-                    </div>
-                  </section>
-                ) : (
-                  <section className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="flex flex-col gap-2 sm:items-end">
+        <select
+          value={safeActivePredictionsGroup}
+          onChange={(event) => setActivePredictionsGroup(event.target.value)}
+          className="rounded-2xl border border-white/10 bg-white px-4 py-2.5 text-sm font-black text-slate-950 outline-none"
+        >
+          {standingsGroupLabels.map((groupLabel) => (
+            <option key={groupLabel} value={groupLabel}>
+              {groupLabel}
+            </option>
+          ))}
+        </select>
+
+        <p className="rounded-full bg-white/10 px-3 py-1 text-xs font-black">
+          {selectedGroupMatches.length} partidos
+        </p>
+      </div>
+    </div>
+
+    <div className="grid gap-2 md:grid-cols-2">
+      {selectedGroupMatches.map((match) => (
+        <CompactMatchCard
+          key={match.id}
+          match={match}
+          onSavePrediction={handleSavePrediction}
+        />
+      ))}
+    </div>
+  </section>
+) : (
+                  <section className="grid gap-2 sm:grid-cols-2">
                     {!isLoadingMatches &&
                       filteredStageMatches.map((match) => (
                         <CompactMatchCard
