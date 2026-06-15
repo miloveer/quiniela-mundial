@@ -32,7 +32,7 @@ function CompactMatchCard({ match, onSavePrediction }) {
 
   return (
     <article
-      className={`rounded-2xl border p-3 shadow-sm ${
+      className={`rounded-2xl border p-2 shadow-sm ${
         hasResult
           ? 'border-slate-300 bg-slate-50'
           : hasPrediction
@@ -79,12 +79,12 @@ function CompactMatchCard({ match, onSavePrediction }) {
             value={homeScore}
             onChange={(event) => setHomeScore(event.target.value)}
             disabled={isLocked || hasResult}
-            className="h-9 rounded-xl border border-slate-200 bg-white text-center text-sm font-black text-slate-950 outline-none focus:border-emerald-400 disabled:bg-slate-100"
+            className="h-8 w-10 rounded-xl border border-slate-200 bg-white text-center text-xs font-black text-slate-950 outline-none focus:border-emerald-400 disabled:bg-slate-100 sm:w-12 sm:text-sm"
           />
         </div>
 
         <div className="grid grid-cols-[1fr_48px] items-center gap-2">
-          <p className="truncate text-sm font-black text-slate-950">
+          <p className="truncate text-[11px] font-black text-slate-950 sm:text-sm">
             <span className="mr-1">{getTeamFlag(match.awayTeam)}</span>
             {awayName}
           </p>
@@ -95,7 +95,7 @@ function CompactMatchCard({ match, onSavePrediction }) {
             value={awayScore}
             onChange={(event) => setAwayScore(event.target.value)}
             disabled={isLocked || hasResult}
-            className="h-9 rounded-xl border border-slate-200 bg-white text-center text-sm font-black text-slate-950 outline-none focus:border-emerald-400 disabled:bg-slate-100"
+            className="h-8 w-10 rounded-xl border border-slate-200 bg-white text-center text-xs font-black text-slate-950 outline-none focus:border-emerald-400 disabled:bg-slate-100 sm:w-12 sm:text-sm"
           />
         </div>
       </div>
@@ -119,7 +119,7 @@ function CompactMatchCard({ match, onSavePrediction }) {
           <button
             type="button"
             onClick={handleSave}
-            className="rounded-xl bg-slate-950 px-3 py-2 text-[11px] font-black text-white transition hover:bg-slate-800"
+            className="rounded-xl bg-slate-950 px-2 py-1.5 text-[10px] font-black text-white transition hover:bg-slate-800 sm:px-3 sm:py-2 sm:text-[11px]"
           >
             Guardar
           </button>
