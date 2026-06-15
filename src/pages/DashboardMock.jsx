@@ -5,7 +5,7 @@ import Header from '../components/Header';
 import AppNavigation from '../components/AppNavigation';
 import DashboardSummary from '../components/DashboardSummary';
 import StageTabs from '../components/StageTabs';
-import MatchCard from '../components/MatchCard';
+import CompactMatchCard from '../components/CompactMatchCard';
 import MatchFilters from '../components/MatchFilters';
 import RankingCard from '../components/RankingCard';
 import JoinLeagueModal from '../components/JoinLeagueModal';
@@ -21,7 +21,6 @@ import PrizeEditorModal from '../components/PrizeEditorModal';
 import LeaguePrizeSettingsModal from '../components/LeaguePrizeSettingsModal';
 import PrizePreviewCard from '../components/PrizePreviewCard';
 import StageProgressCard from '../components/StageProgressCard';
-import StageStatsBanner from '../components/StageStatsBanner';
 import StageRankingPreviewCard from '../components/StageRankingPreviewCard';
 import GroupStandingsCard from '../components/GroupStandingsCard';
 
@@ -43,15 +42,9 @@ import {
   savePrediction,
 } from '../services/predictionService';
 
-import {
-  getLeagueMatches,
-  updateMatchResult,
-} from '../services/matchService';
+import { getLeagueMatches, updateMatchResult } from '../services/matchService';
 
-import {
-  getLeaguePrizes,
-  saveLeaguePrizes,
-} from '../services/prizeService';
+import { getLeaguePrizes, saveLeaguePrizes } from '../services/prizeService';
 
 import {
   matches as initialMatches,
@@ -80,8 +73,6 @@ import {
   buildGroupStandings,
   filterMatchesBySearch,
   filterMatchesByStatus,
-  groupMatchesByDayStatus,
-  sortMatchesTodayFirst,
   groupMatchesByGroup,
   getCompletedPredictions,
   getMatchFilterCounts,
@@ -90,7 +81,6 @@ import {
   getStageMatches,
   sortMatchesByStatusAndDate,
 } from '../utils/matchUtils';
-
 
 function cleanBaseMatches(matches = []) {
   return matches.map((match) => ({
@@ -137,11 +127,60 @@ function EmptyLeagueState({ onJoinLeague, onCreateLeague }) {
   );
 }
 
+function isSameLocalDay(dateA, dateB) {
+  const firstDate = new Date(dateA);
+  const secondDate = new Date(dateB);
+
+  return (
+    firstDate.getFullYear() === secondDate.getFullYear() &&
+    firstDate.getMonth() === secondDate.getMonth() &&
+    firstDate.getDate() === secondDate.getDate()
+  );
+}
+
+function getMatchDayStatus(matchDate) {
+  const now = new Date();
+  const matchLocalDate = new Date(matchDate);
+
+  if (isSameLocalDay(matchLocalDate, now)) {
+    return 'today';
+  }
+
+  if (matchLocalDate.getTime() > now.getTime()) {
+    return 'upcoming';
+  }
+
+  return 'past';
+}
+
+function sortMatchesTodayFirst(matchesToSort = []) {
+  const priority = {
+    today: 0,
+    upcoming: 1,
+    past: 2,
+  };
+
+  return [...matchesToSort].sort((firstMatch, secondMatch) => {
+    const firstPriority = priority[getMatchDayStatus(firstMatch.date)];
+    const secondPriority = priority[getMatchDayStatus(secondMatch.date)];
+
+    if (firstPriority !== secondPriority) {
+      return firstPriority - secondPriority;
+    }
+
+    return (
+      new Date(firstMatch.date).getTime() -
+      new Date(secondMatch.date).getTime()
+    );
+  });
+}
+
 function DashboardMock({ user, onLogout, onUpdateUser }) {
   const [activeSection, setActiveSection] = useState('home');
   const [activeStageId, setActiveStageId] = useState(stages[0].id);
   const [activeMatchFilter, setActiveMatchFilter] = useState('all');
   const [matchSearchTerm, setMatchSearchTerm] = useState('');
+  const [activeStandingsGroup, setActiveStandingsGroup] = useState('');
 
   const [isJoinLeagueModalOpen, setIsJoinLeagueModalOpen] = useState(false);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
@@ -203,44 +242,82 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     return getStageMatches(visibleMatches, activeStageId);
   }, [visibleMatches, activeStageId]);
 
- const filteredStageMatches = useMemo(() => {
-  const filteredByStatus = filterMatchesByStatus(
-    stageMatches,
-    activeMatchFilter
-  );
+  const filteredStageMatches = useMemo(() => {
+    const filteredByStatus = filterMatchesByStatus(
+      stageMatches,
+      activeMatchFilter
+    );
 
-  const filteredBySearch = filterMatchesBySearch(
-    filteredByStatus,
-    matchSearchTerm
-  );
+    const filteredBySearch = filterMatchesBySearch(
+      filteredByStatus,
+      matchSearchTerm
+    );
 
-  return sortMatchesTodayFirst(filteredBySearch);
-}, [stageMatches, activeMatchFilter, matchSearchTerm]);
+    return sortMatchesTodayFirst(filteredBySearch);
+  }, [stageMatches, activeMatchFilter, matchSearchTerm]);
 
-const groupedStageMatches = useMemo(() => {
-  return groupMatchesByGroup(filteredStageMatches);
-}, [filteredStageMatches]);
-const groupedMatchesByDayStatus = useMemo(() => {
-  return groupMatchesByDayStatus(filteredStageMatches);
-}, [filteredStageMatches]);
+  const groupedStageMatches = useMemo(() => {
+    return groupMatchesByGroup(filteredStageMatches);
+  }, [filteredStageMatches]);
 
-const groupStandings = useMemo(() => {
-  return buildGroupStandings(stageMatches);
-}, [stageMatches]);
+  const groupStandings = useMemo(() => {
+    return buildGroupStandings(stageMatches);
+  }, [stageMatches]);
 
-const isGroupStage = activeStageId === 'group-stage';
+  const standingsGroupLabels = useMemo(() => {
+    return Object.keys(groupStandings);
+  }, [groupStandings]);
+const safeActiveStandingsGroup = useMemo(() => {
+  if (
+    activeStandingsGroup &&
+    standingsGroupLabels.includes(activeStandingsGroup)
+  ) {
+    return activeStandingsGroup;
+  }
+
+  return standingsGroupLabels[0] || '';
+}, [activeStandingsGroup, standingsGroupLabels]);
+
+  const selectedGroupStandings = useMemo(() => {
+  if (!safeActiveStandingsGroup || !groupStandings[safeActiveStandingsGroup]) {
+    return {};
+  }
+
+  return {
+    [safeActiveStandingsGroup]: groupStandings[safeActiveStandingsGroup],
+  };
+}, [safeActiveStandingsGroup, groupStandings]);
+
+  const isGroupStage = activeStageId === 'group-stage';
+
+  const selectedGroupMatches = useMemo(() => {
+  if (!isGroupStage) {
+    return filteredStageMatches;
+  }
+
+  if (!safeActiveStandingsGroup || !groupedStageMatches[safeActiveStandingsGroup]) {
+    return [];
+  }
+
+  return groupedStageMatches[safeActiveStandingsGroup];
+}, [
+  isGroupStage,
+  filteredStageMatches,
+  groupedStageMatches,
+  safeActiveStandingsGroup,
+]);
 
   const matchFilterCounts = getMatchFilterCounts(stageMatches);
   const stageCompletedPredictions = getCompletedPredictions(stageMatches);
-const stagePendingMatches = getPendingMatches(stageMatches);
-const stageTotalMatches = stageMatches.length;
-
+  const stagePendingMatches = getPendingMatches(stageMatches);
+  const stageTotalMatches = stageMatches.length;
 
   const completedPredictions = getCompletedPredictions(visibleMatches);
   const pendingMatches = getPendingMatches(visibleMatches);
   const pendingMatchesList = sortMatchesByStatusAndDate(
     getPendingMatchesList(visibleMatches)
   );
+
   const totalPoints = calculateTotalPoints(visibleMatches);
   const exactScores = calculateExactScores(visibleMatches);
   const resultHits = calculateResultHits(visibleMatches);
@@ -304,34 +381,34 @@ const stageTotalMatches = stageMatches.length;
 
   const leagueAdminUsers =
     hasActiveLeague && userProfiles.length > 0
-    ? userProfiles.map((profile) => {
-        const profileId = profile.uid || profile.id;
+      ? userProfiles.map((profile) => {
+          const profileId = profile.uid || profile.id;
 
-        const userPredictions = memberPredictions.filter(
-          (prediction) => prediction.userId === profileId
-        );
+          const userPredictions = memberPredictions.filter(
+            (prediction) => prediction.userId === profileId
+          );
 
-        const predictionsMap = userPredictions.reduce(
-          (accumulator, predictionDoc) => {
-            return {
-              ...accumulator,
-              [predictionDoc.matchId]: predictionDoc.prediction,
-            };
-          },
-          {}
-        );
+          const predictionsMap = userPredictions.reduce(
+            (accumulator, predictionDoc) => {
+              return {
+                ...accumulator,
+                [predictionDoc.matchId]: predictionDoc.prediction,
+              };
+            },
+            {}
+          );
 
-        return {
-          id: profileId,
-          uid: profileId,
-          name: profile.displayName || 'Usuario',
-          badge: profileId === user?.uid ? 'Tú' : 'Participante',
-          predictions: predictionsMap,
-        };
-      })
-    : hasActiveLeague
-      ? [currentUserForRanking]
-      : [];
+          return {
+            id: profileId,
+            uid: profileId,
+            name: profile.displayName || 'Usuario',
+            badge: profileId === user?.uid ? 'Tú' : 'Participante',
+            predictions: predictionsMap,
+          };
+        })
+      : hasActiveLeague
+        ? [currentUserForRanking]
+        : [];
 
   const currentUserPosition = getUserRankingPosition(ranking, currentUserName);
 
@@ -612,71 +689,68 @@ const stageTotalMatches = stageMatches.length;
   }
 
   async function handleCreateLeague({ name, code, entryFee, prizeMode }) {
-  if (!user?.uid) {
-    throw new Error('USER_NOT_AUTHENTICATED');
-  }
+    if (!user?.uid) {
+      throw new Error('USER_NOT_AUTHENTICATED');
+    }
 
-  const league = await createLeague({
-    name,
-    code,
-    ownerId: user.uid,
-    ownerDisplayName: user.displayName,
-    ownerEmail: user.email,
-    entryFee,
-    prizeMode,
-  });
-
-  onUpdateUser({
-    leagueCode: league.code,
-    activeLeagueId: league.id,
-    leagueName: league.name,
-  });
-
-  setIsCreateLeagueModalOpen(false);
-
-  await loadUserLeagues();
-  await loadUserProfiles();
-  await loadLeagueMembers();
-}
-
-  async function handleSyncFootballDataMatches() {
-  if (!isLeagueOwner) {
-    alert('Solo el administrador puede sincronizar partidos.');
-    return;
-  }
-
-  if (!activeLeagueId || activeLeagueId === 'default') {
-    alert('Primero selecciona o crea una liga.');
-    return;
-  }
-
-  try {
-    const result = await syncFootballDataMatches({
-      leagueId: activeLeagueId,
+    const league = await createLeague({
+      name,
+      code,
+      ownerId: user.uid,
+      ownerDisplayName: user.displayName,
+      ownerEmail: user.email,
+      entryFee,
+      prizeMode,
     });
 
-    await loadLeagueMatches();
-    await loadLeaguePredictions();
+    onUpdateUser({
+      leagueCode: league.code,
+      activeLeagueId: league.id,
+      leagueName: league.name,
+    });
 
-    if (result.total === 0) {
-      alert(
-        'La API respondió correctamente, pero aún no encontró partidos 2026.'
-      );
+    setIsCreateLeagueModalOpen(false);
+
+    await loadUserLeagues();
+    await loadUserProfiles();
+    await loadLeagueMembers();
+  }
+
+  async function handleSyncFootballDataMatches() {
+    if (!isLeagueOwner) {
+      alert('Solo el administrador puede sincronizar partidos.');
       return;
     }
 
-    alert(
-  `Sincronización completada:\n${result.total} partidos encontrados.\n${result.finishedMatches || 0} resultados oficiales actualizados.`
-);
-  } catch (error) {
-  console.error('Error sincronizando football-data:', error);
+    if (!activeLeagueId || activeLeagueId === 'default') {
+      alert('Primero selecciona o crea una liga.');
+      return;
+    }
 
-  alert(
-    error.message ||
-      'No se pudieron sincronizar los partidos desde la API.'
-  );
-}
-}
+    try {
+      const result = await syncFootballDataMatches({
+        leagueId: activeLeagueId,
+      });
+
+      await loadLeagueMatches();
+      await loadLeaguePredictions();
+
+      if (result.total === 0) {
+        alert(
+          'La API respondió correctamente, pero aún no encontró partidos 2026.'
+        );
+        return;
+      }
+
+      alert(
+        result.message ||
+          `Sincronización completada:\n${result.total} partidos encontrados.\n${result.finishedMatches || 0} resultados oficiales actualizados.`
+      );
+    } catch (error) {
+      console.error('Error sincronizando football-data:', error);
+      alert(error.message || 'No se pudieron sincronizar los partidos desde la API.');
+    }
+  }
 
   async function handleSavePrizes(prizesToSave) {
     if (!isLeagueOwner) {
@@ -992,41 +1066,41 @@ const stageTotalMatches = stageMatches.length;
                 </div>
 
                 {user?.leagueCode ? (
-  <div className="flex flex-col gap-2 sm:items-end">
-    <div className="flex items-center gap-2 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700">
-      <KeyRound size={18} />
-      Liga activa
-    </div>
+                  <div className="flex flex-col gap-2 sm:items-end">
+                    <div className="flex items-center gap-2 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700">
+                      <KeyRound size={18} />
+                      Liga activa
+                    </div>
 
-    <div
-      className={`rounded-2xl px-4 py-2 text-xs font-black ${
-        isLeagueOwner
-          ? 'bg-slate-950 text-white'
-          : 'bg-slate-100 text-slate-600'
-      }`}
-    >
-      {isLeagueOwner ? 'Administrador' : 'Participante'}
-    </div>
+                    <div
+                      className={`rounded-2xl px-4 py-2 text-xs font-black ${
+                        isLeagueOwner
+                          ? 'bg-slate-950 text-white'
+                          : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      {isLeagueOwner ? 'Administrador' : 'Participante'}
+                    </div>
 
-    <div className="grid w-full gap-2 sm:w-auto sm:grid-cols-2">
-      <button
-        type="button"
-        onClick={() => setIsJoinLeagueModalOpen(true)}
-        className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
-      >
-        Unirme a otra
-      </button>
+                    <div className="grid w-full gap-2 sm:w-auto sm:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsJoinLeagueModalOpen(true)}
+                        className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                      >
+                        Unirme a otra
+                      </button>
 
-      <button
-        type="button"
-        onClick={() => setIsCreateLeagueModalOpen(true)}
-        className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-700"
-      >
-        Crear otra
-      </button>
-    </div>
-  </div>
-) : (
+                      <button
+                        type="button"
+                        onClick={() => setIsCreateLeagueModalOpen(true)}
+                        className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-700"
+                      >
+                        Crear otra
+                      </button>
+                    </div>
+                  </div>
+                ) : (
                   <button
                     type="button"
                     onClick={() => setIsJoinLeagueModalOpen(true)}
@@ -1108,16 +1182,18 @@ const stageTotalMatches = stageMatches.length;
                 onCreateLeague={() => setIsCreateLeagueModalOpen(true)}
               />
             ) : (
-              <section className="space-y-4">
-                <div className="rounded-[2rem] border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
-                  <div className="mb-4">
-                    <p className="text-sm font-bold text-emerald-700">
-                      Navegación por etapas
-                    </p>
+              <section className="space-y-3">
+                <section className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-3 shadow-sm backdrop-blur">
+                  <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-widest text-emerald-600">
+                        Etapas
+                      </p>
 
-                    <h2 className="text-2xl font-black text-slate-950">
-                      {activeStage?.fullName}
-                    </h2>
+                      <h2 className="text-lg font-black text-slate-950">
+                        {activeStage?.fullName}
+                      </h2>
+                    </div>
                   </div>
 
                   <StageTabs
@@ -1125,54 +1201,155 @@ const stageTotalMatches = stageMatches.length;
                     activeStageId={activeStageId}
                     onChangeStage={setActiveStageId}
                   />
-                </div>
+                </section>
 
-                
-                <StageStatsBanner stage={activeStage} matches={stageMatches} />
-                <section className="rounded-[1.5rem] border border-emerald-100 bg-emerald-50 p-4 shadow-sm">
-  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-    <div>
-      <p className="text-sm font-black text-emerald-700">
-        Avance de tus pronósticos
-      </p>
+                <section className="grid gap-2 md:grid-cols-2">
+                  <article className="rounded-[1.25rem] border border-slate-200 bg-white p-3 shadow-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] font-black uppercase tracking-widest text-emerald-600">
+                          Resumen de etapa
+                        </p>
 
-      <h3 className="mt-1 text-2xl font-black text-slate-950">
-        {stageCompletedPredictions} de {stageTotalMatches} partidos llenados
-      </h3>
+                        <h3 className="mt-1 truncate text-base font-black text-slate-950">
+                          {activeStage?.fullName}
+                        </h3>
+                      </div>
 
-      <p className="mt-1 text-sm font-bold text-slate-500">
-        Te faltan {stagePendingMatches} partidos por capturar en esta etapa.
-      </p>
-    </div>
+                      <div className="rounded-2xl bg-slate-950 px-3 py-2 text-center text-white">
+                        <p className="text-lg font-black">
+                          {stageTotalMatches}
+                        </p>
+                        <p className="text-[9px] font-bold uppercase text-slate-400">
+                          Partidos
+                        </p>
+                      </div>
+                    </div>
 
-    <div className="rounded-2xl bg-white px-4 py-3 text-center shadow-sm">
-      <p className="text-xs font-black uppercase tracking-widest text-slate-400">
-        Progreso
-      </p>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-center">
+                      <div className="rounded-2xl bg-emerald-50 p-2">
+                        <p className="text-lg font-black text-emerald-700">
+                          {stageCompletedPredictions}
+                        </p>
+                        <p className="text-[10px] font-bold uppercase text-slate-400">
+                          Llenos
+                        </p>
+                      </div>
 
-      <p className="text-2xl font-black text-emerald-700">
-        {stageTotalMatches > 0
-          ? Math.round((stageCompletedPredictions / stageTotalMatches) * 100)
-          : 0}
-        %
-      </p>
-    </div>
-  </div>
-</section>
+                      <div className="rounded-2xl bg-rose-50 p-2">
+                        <p className="text-lg font-black text-rose-600">
+                          {stagePendingMatches}
+                        </p>
+                        <p className="text-[10px] font-bold uppercase text-slate-400">
+                          Faltan
+                        </p>
+                      </div>
+                    </div>
+                  </article>
 
-                {isGroupStage && (
-                  <GroupStandingsCard groupStandings={groupStandings} />
-                )}
-
-                <div className="rounded-[2rem] border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur">
-                  <div className="mb-4">
-                    <p className="text-sm font-bold text-emerald-700">
-                      Filtros rápidos
+                  <article className="rounded-[1.25rem] border border-emerald-100 bg-emerald-50 p-3 shadow-sm">
+                    <p className="text-[11px] font-black uppercase tracking-widest text-emerald-700">
+                      Avance de tus pronósticos
                     </p>
 
-                    <h2 className="text-2xl font-black text-slate-950">
-                      Estado de pronósticos
-                    </h2>
+                    <div className="mt-2 flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-2xl font-black text-slate-950">
+                          {stageTotalMatches > 0
+                            ? Math.round(
+                                (stageCompletedPredictions /
+                                  stageTotalMatches) *
+                                  100
+                              )
+                            : 0}
+                          %
+                        </h3>
+
+                        <p className="text-xs font-bold text-slate-500">
+                          {stageCompletedPredictions} de {stageTotalMatches}{' '}
+                          capturados
+                        </p>
+                      </div>
+
+                      <div className="h-3 flex-1 overflow-hidden rounded-full bg-white">
+                        <div
+                          className="h-full rounded-full bg-emerald-600"
+                          style={{
+                            width: `${
+                              stageTotalMatches > 0
+                                ? Math.round(
+                                    (stageCompletedPredictions /
+                                      stageTotalMatches) *
+                                      100
+                                  )
+                                : 0
+                            }%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </article>
+                </section>
+
+                {isGroupStage && standingsGroupLabels.length > 0 && (
+                  <section className="rounded-[1.25rem] border border-slate-200 bg-white p-3 shadow-sm">
+                    <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-[11px] font-black uppercase tracking-widest text-emerald-600">
+                          Grupo seleccionado
+                        </p>
+
+                        <h3 className="text-lg font-black text-slate-950">
+                          Tabla y partidos por grupo
+                        </h3>
+                      </div>
+
+                      <select
+                        value={safeActiveStandingsGroup}
+                        onChange={(event) =>
+                          setActiveStandingsGroup(event.target.value)
+                        }
+                        className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-black text-slate-700 outline-none focus:border-emerald-400"
+                      >
+                        {standingsGroupLabels.map((groupLabel) => (
+                          <option key={groupLabel} value={groupLabel}>
+                            {groupLabel}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <GroupStandingsCard
+                      groupStandings={selectedGroupStandings}
+                    />
+                  </section>
+                )}
+
+                <section className="rounded-[1.25rem] border border-slate-200 bg-white p-3 shadow-sm">
+                  <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-[11px] font-black uppercase tracking-widest text-emerald-600">
+                        Filtros rápidos
+                      </p>
+
+                      <h3 className="text-lg font-black text-slate-950">
+                        Estado de partidos
+                      </h3>
+                    </div>
+
+                    <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
+                      <Search size={16} className="text-slate-400" />
+
+                      <input
+                        type="search"
+                        value={matchSearchTerm}
+                        onChange={(event) =>
+                          setMatchSearchTerm(event.target.value)
+                        }
+                        placeholder="Buscar..."
+                        className="w-full bg-transparent text-xs font-bold text-slate-700 outline-none placeholder:text-slate-400 sm:w-52"
+                      />
+                    </div>
                   </div>
 
                   <MatchFilters
@@ -1180,28 +1357,10 @@ const stageTotalMatches = stageMatches.length;
                     onChangeFilter={setActiveMatchFilter}
                     counts={matchFilterCounts}
                   />
-
-                  <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                    <label className="mb-2 block text-xs font-black uppercase tracking-wider text-slate-400">
-                      Buscar partido
-                    </label>
-
-                    <div className="flex items-center gap-2">
-                      <Search size={18} className="text-slate-400" />
-
-                      <input
-                        type="search"
-                        value={matchSearchTerm}
-                        onChange={(event) => setMatchSearchTerm(event.target.value)}
-                        placeholder="Buscar por equipo, estadio o grupo..."
-                        className="w-full bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-slate-400"
-                      />
-                    </div>
-                  </div>
-                </div>
+                </section>
 
                 {isLoadingMatches && (
-                  <section className="rounded-[2rem] border border-slate-200 bg-white/80 p-5 text-center shadow-sm">
+                  <section className="rounded-[1.5rem] border border-slate-200 bg-white/80 p-5 text-center shadow-sm">
                     <p className="text-sm font-black text-emerald-700">
                       Cargando partidos de la liga...
                     </p>
@@ -1213,116 +1372,48 @@ const stageTotalMatches = stageMatches.length;
                 )}
 
                 {!isLoadingMatches && isGroupStage ? (
-                  <section className="space-y-4">
-                    {Object.entries(groupedStageMatches).map(
-                      ([groupLabel, groupMatches]) => (
-                        <article key={groupLabel} className="space-y-3">
-                          <div className="flex items-center justify-between rounded-2xl bg-slate-950 px-4 py-3 text-white">
-                            <div>
-                              <p className="text-xs font-bold uppercase tracking-widest text-emerald-300">
-                                Fase de grupos
-                              </p>
-                              <h3 className="text-lg font-black">
-                                {groupLabel}
-                              </h3>
-                            </div>
+                  <section className="rounded-[1.5rem] border border-slate-200 bg-white p-3 shadow-sm">
+                    <div className="mb-3 flex items-center justify-between rounded-2xl bg-slate-950 px-4 py-3 text-white">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-widest text-emerald-300">
+                          Tus pronósticos
+                        </p>
 
-                            <p className="rounded-full bg-white/10 px-3 py-1 text-xs font-black">
-                              {groupMatches.length} partidos
-                            </p>
-                          </div>
+                        <h3 className="text-lg font-black">
+                          {safeActiveStandingsGroup}
+                        </h3>
+                      </div>
 
-                          <div className="grid gap-3 md:grid-cols-2">
-                            {groupMatches.map((match) => (
-                              <MatchCard
-                                key={match.id}
-                                match={match}
-                                onSavePrediction={handleSavePrediction}
-                              />
-                            ))}
-                          </div>
-                        </article>
-                      )
-                    )}
+                      <p className="rounded-full bg-white/10 px-3 py-1 text-xs font-black">
+                        {selectedGroupMatches.length} partidos
+                      </p>
+                    </div>
+
+                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                      {selectedGroupMatches.map((match) => (
+                        <CompactMatchCard
+                          key={match.id}
+                          match={match}
+                          onSavePrediction={handleSavePrediction}
+                        />
+                      ))}
+                    </div>
                   </section>
                 ) : (
-                  <section className="space-y-5">
-  {groupedMatchesByDayStatus.today.length > 0 && (
-    <section className="space-y-3">
-      <div className="rounded-2xl bg-emerald-600 px-4 py-3 text-white">
-        <p className="text-xs font-black uppercase tracking-widest text-emerald-100">
-          Partidos de hoy
-        </p>
-
-        <h3 className="text-lg font-black">
-          Hoy se juegan {groupedMatchesByDayStatus.today.length} partidos
-        </h3>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {groupedMatchesByDayStatus.today.map((match) => (
-          <MatchCard
-            key={match.id}
-            match={match}
-            onSavePrediction={handleSavePrediction}
-          />
-        ))}
-      </div>
-    </section>
-  )}
-
-  {groupedMatchesByDayStatus.upcoming.length > 0 && (
-    <section className="space-y-3">
-      <div className="rounded-2xl bg-white px-4 py-3 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-widest text-slate-400">
-          Próximos partidos
-        </p>
-
-        <h3 className="text-lg font-black text-slate-950">
-          Calendario pendiente
-        </h3>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {groupedMatchesByDayStatus.upcoming.map((match) => (
-          <MatchCard
-            key={match.id}
-            match={match}
-            onSavePrediction={handleSavePrediction}
-          />
-        ))}
-      </div>
-    </section>
-  )}
-
-  {groupedMatchesByDayStatus.past.length > 0 && (
-    <section className="space-y-3">
-      <div className="rounded-2xl bg-slate-950 px-4 py-3 text-white">
-        <p className="text-xs font-black uppercase tracking-widest text-slate-400">
-          Partidos anteriores
-        </p>
-
-        <h3 className="text-lg font-black">
-          Resultados y pronósticos pasados
-        </h3>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {groupedMatchesByDayStatus.past.map((match) => (
-          <MatchCard
-            key={match.id}
-            match={match}
-            onSavePrediction={handleSavePrediction}
-          />
-        ))}
-      </div>
-    </section>
-  )}
-</section>
+                  <section className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    {!isLoadingMatches &&
+                      filteredStageMatches.map((match) => (
+                        <CompactMatchCard
+                          key={match.id}
+                          match={match}
+                          onSavePrediction={handleSavePrediction}
+                        />
+                      ))}
+                  </section>
                 )}
 
                 {!isLoadingMatches && filteredStageMatches.length === 0 && (
-                  <section className="rounded-[2rem] border border-dashed border-slate-300 bg-white/70 p-6 text-center">
+                  <section className="rounded-[1.5rem] border border-dashed border-slate-300 bg-white/70 p-6 text-center">
                     <p className="text-lg font-black text-slate-950">
                       No hay partidos en este filtro
                     </p>
@@ -1448,17 +1539,17 @@ const stageTotalMatches = stageMatches.length;
             </section>
 
             <AdminPanelCard
-  users={leagueAdminUsers}
-  matches={visibleMatches}
-  members={safeLeagueMembers}
-  entryFee={activeLeague?.entryFee || 0}
-  prizeMode={activeLeague?.prizeMode || 'fixed'}
-  onOpenResultModal={() => setIsResultModalOpen(true)}
-  onOpenCreateLeagueModal={() => setIsCreateLeagueModalOpen(true)}
-  onOpenPrizeEditorModal={() => setIsPrizeEditorModalOpen(true)}
-  onOpenPrizeSettingsModal={() => setIsPrizeSettingsModalOpen(true)}
-  onSyncFootballDataMatches={handleSyncFootballDataMatches}
-/>
+              users={leagueAdminUsers}
+              matches={visibleMatches}
+              members={safeLeagueMembers}
+              entryFee={activeLeague?.entryFee || 0}
+              prizeMode={activeLeague?.prizeMode || 'fixed'}
+              onOpenResultModal={() => setIsResultModalOpen(true)}
+              onOpenCreateLeagueModal={() => setIsCreateLeagueModalOpen(true)}
+              onOpenPrizeEditorModal={() => setIsPrizeEditorModalOpen(true)}
+              onOpenPrizeSettingsModal={() => setIsPrizeSettingsModalOpen(true)}
+              onSyncFootballDataMatches={handleSyncFootballDataMatches}
+            />
           </div>
         )}
 
