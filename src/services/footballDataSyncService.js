@@ -19,7 +19,11 @@ export async function syncFootballDataMatches({ leagueId }) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data?.message || 'No se pudieron actualizar los partidos');
+    throw new Error(
+      data?.message ||
+        data?.error ||
+        `No se pudieron actualizar los partidos. Código ${response.status}`
+    );
   }
 
   return data;

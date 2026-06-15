@@ -1,32 +1,32 @@
-import { useEffect, useMemo, useState } from "react";
-import { KeyRound, Plus, Search, UsersRound } from "lucide-react";
+import { useEffect, useMemo, useState } from 'react';
+import { KeyRound, Plus, Search, UsersRound } from 'lucide-react';
 
-import Header from "../components/Header";
-import AppNavigation from "../components/AppNavigation";
-import DashboardSummary from "../components/DashboardSummary";
-import StageTabs from "../components/StageTabs";
-import MatchCard from "../components/MatchCard";
-import MatchFilters from "../components/MatchFilters";
-import RankingCard from "../components/RankingCard";
-import JoinLeagueModal from "../components/JoinLeagueModal";
-import PendingMatchesCard from "../components/PendingMatchesCard";
-import PredictionHistoryCard from "../components/PredictionHistoryCard";
-import UserComparisonCard from "../components/UserComparisonCard";
-import PrizesCard from "../components/PrizesCard";
-import AdminPanelCard from "../components/AdminPanelCard";
-import ResultModal from "../components/ResultModal";
-import CreateLeagueModal from "../components/CreateLeagueModal";
-import UserLeaguesCard from "../components/UserLeaguesCard";
-import PrizeEditorModal from "../components/PrizeEditorModal";
-import LeaguePrizeSettingsModal from "../components/LeaguePrizeSettingsModal";
-import PrizePreviewCard from "../components/PrizePreviewCard";
-import StageProgressCard from "../components/StageProgressCard";
-import StageStatsBanner from "../components/StageStatsBanner";
-import StageRankingPreviewCard from "../components/StageRankingPreviewCard";
-import GroupStandingsCard from "../components/GroupStandingsCard";
+import Header from '../components/Header';
+import AppNavigation from '../components/AppNavigation';
+import DashboardSummary from '../components/DashboardSummary';
+import StageTabs from '../components/StageTabs';
+import MatchCard from '../components/MatchCard';
+import MatchFilters from '../components/MatchFilters';
+import RankingCard from '../components/RankingCard';
+import JoinLeagueModal from '../components/JoinLeagueModal';
+import PendingMatchesCard from '../components/PendingMatchesCard';
+import PredictionHistoryCard from '../components/PredictionHistoryCard';
+import UserComparisonCard from '../components/UserComparisonCard';
+import PrizesCard from '../components/PrizesCard';
+import AdminPanelCard from '../components/AdminPanelCard';
+import ResultModal from '../components/ResultModal';
+import CreateLeagueModal from '../components/CreateLeagueModal';
+import UserLeaguesCard from '../components/UserLeaguesCard';
+import PrizeEditorModal from '../components/PrizeEditorModal';
+import LeaguePrizeSettingsModal from '../components/LeaguePrizeSettingsModal';
+import PrizePreviewCard from '../components/PrizePreviewCard';
+import StageProgressCard from '../components/StageProgressCard';
+import StageStatsBanner from '../components/StageStatsBanner';
+import StageRankingPreviewCard from '../components/StageRankingPreviewCard';
+import GroupStandingsCard from '../components/GroupStandingsCard';
 
-import { getUsersProfilesByIds } from "../services/userService";
-import { syncFootballDataMatches } from "../services/footballDataSyncService";
+import { getUsersProfilesByIds } from '../services/userService';
+import { syncFootballDataMatches } from '../services/footballDataSyncService';
 
 import {
   createLeague,
@@ -35,23 +35,29 @@ import {
   getUserLeagues,
   joinLeague,
   updateLeaguePrizeSettings,
-} from "../services/leagueService";
+} from '../services/leagueService';
 
 import {
   getLeaguePredictions,
   getUserPredictions,
   savePrediction,
-} from "../services/predictionService";
+} from '../services/predictionService';
 
-import { getLeagueMatches, updateMatchResult } from "../services/matchService";
+import {
+  getLeagueMatches,
+  updateMatchResult,
+} from '../services/matchService';
 
-import { getLeaguePrizes, saveLeaguePrizes } from "../services/prizeService";
+import {
+  getLeaguePrizes,
+  saveLeaguePrizes,
+} from '../services/prizeService';
 
 import {
   matches as initialMatches,
   prizes as initialPrizes,
   stages,
-} from "../data/mockData";
+} from '../data/mockData';
 
 import {
   buildRanking,
@@ -62,13 +68,13 @@ import {
   calculateResultHits,
   calculateTotalPoints,
   getUserRankingPosition,
-} from "../utils/scoreUtils";
+} from '../utils/scoreUtils';
 
 import {
   getLeagueMatchesStorageKey,
   getStorageItem,
   setStorageItem,
-} from "../utils/storageUtils";
+} from '../utils/storageUtils';
 
 import {
   buildGroupStandings,
@@ -81,7 +87,8 @@ import {
   getPendingMatchesList,
   getStageMatches,
   sortMatchesByStatusAndDate,
-} from "../utils/matchUtils";
+} from '../utils/matchUtils';
+
 
 function cleanBaseMatches(matches = []) {
   return matches.map((match) => ({
@@ -94,7 +101,9 @@ function cleanBaseMatches(matches = []) {
 function EmptyLeagueState({ onJoinLeague, onCreateLeague }) {
   return (
     <section className="rounded-[1.5rem] border border-dashed border-slate-300 bg-white/80 p-5 text-center shadow-sm">
-      <p className="text-sm font-bold text-emerald-700">Empieza tu quiniela</p>
+      <p className="text-sm font-bold text-emerald-700">
+        Empieza tu quiniela
+      </p>
 
       <h2 className="mt-1 text-2xl font-black text-slate-950">
         Aún no estás en una liga
@@ -127,10 +136,10 @@ function EmptyLeagueState({ onJoinLeague, onCreateLeague }) {
 }
 
 function DashboardMock({ user, onLogout, onUpdateUser }) {
-  const [activeSection, setActiveSection] = useState("home");
+  const [activeSection, setActiveSection] = useState('home');
   const [activeStageId, setActiveStageId] = useState(stages[0].id);
-  const [activeMatchFilter, setActiveMatchFilter] = useState("all");
-  const [matchSearchTerm, setMatchSearchTerm] = useState("");
+  const [activeMatchFilter, setActiveMatchFilter] = useState('all');
+  const [matchSearchTerm, setMatchSearchTerm] = useState('');
 
   const [isJoinLeagueModalOpen, setIsJoinLeagueModalOpen] = useState(false);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
@@ -151,23 +160,21 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
   const [leagueMembers, setLeagueMembers] = useState([]);
 
-  const activeLeagueId = user?.activeLeagueId || user?.leagueCode || "default";
-  const hasActiveLeague = Boolean(
-    activeLeagueId && activeLeagueId !== "default",
-  );
+  const activeLeagueId = user?.activeLeagueId || user?.leagueCode || 'default';
+  const hasActiveLeague = Boolean(activeLeagueId && activeLeagueId !== 'default');
   const matchesStorageKey = getLeagueMatchesStorageKey(activeLeagueId);
 
   const safeUserLeagues = Array.isArray(userLeagues) ? userLeagues : [];
   const safeLeagueMembers = Array.isArray(leagueMembers) ? leagueMembers : [];
 
   const activeLeague = safeUserLeagues.find(
-    (league) => league.id === activeLeagueId,
+    (league) => league.id === activeLeagueId
   );
 
   const activeLeagueMemberIds = activeLeague?.members || [];
 
   const isLeagueOwner = Boolean(
-    user?.uid && activeLeague?.ownerId && user.uid === activeLeague.ownerId,
+    user?.uid && activeLeague?.ownerId && user.uid === activeLeague.ownerId
   );
 
   const totalLeagueMembers =
@@ -178,7 +185,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   const [matchesByLeague, setMatchesByLeague] = useState(() => ({
     [activeLeagueId]: getStorageItem(
       matchesStorageKey,
-      cleanBaseMatches(initialMatches),
+      cleanBaseMatches(initialMatches)
     ),
   }));
 
@@ -195,50 +202,51 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   }, [visibleMatches, activeStageId]);
 
   const filteredStageMatches = useMemo(() => {
-    const filteredByStatus = filterMatchesByStatus(
-      stageMatches,
-      activeMatchFilter,
-    );
+  const filteredByStatus = filterMatchesByStatus(
+    stageMatches,
+    activeMatchFilter
+  );
 
-    const filteredBySearch = filterMatchesBySearch(
-      filteredByStatus,
-      matchSearchTerm,
-    );
+  const filteredBySearch = filterMatchesBySearch(
+    filteredByStatus,
+    matchSearchTerm
+  );
 
-    return sortMatchesByStatusAndDate(filteredBySearch);
-  }, [stageMatches, activeMatchFilter, matchSearchTerm]);
+  return sortMatchesByStatusAndDate(filteredBySearch);
+}, [stageMatches, activeMatchFilter, matchSearchTerm]);
 
-  const groupedStageMatches = useMemo(() => {
-    return groupMatchesByGroup(filteredStageMatches);
-  }, [filteredStageMatches]);
+const groupedStageMatches = useMemo(() => {
+  return groupMatchesByGroup(filteredStageMatches);
+}, [filteredStageMatches]);
 
-  const groupStandings = useMemo(() => {
-    return buildGroupStandings(stageMatches);
-  }, [stageMatches]);
+const groupStandings = useMemo(() => {
+  return buildGroupStandings(stageMatches);
+}, [stageMatches]);
 
-  const isGroupStage = activeStageId === "group-stage";
+const isGroupStage = activeStageId === 'group-stage';
 
   const matchFilterCounts = getMatchFilterCounts(stageMatches);
   const stageCompletedPredictions = getCompletedPredictions(stageMatches);
-  const stagePendingMatches = getPendingMatches(stageMatches);
-  const stageTotalMatches = stageMatches.length;
+const stagePendingMatches = getPendingMatches(stageMatches);
+const stageTotalMatches = stageMatches.length;
+
 
   const completedPredictions = getCompletedPredictions(visibleMatches);
   const pendingMatches = getPendingMatches(visibleMatches);
   const pendingMatchesList = sortMatchesByStatusAndDate(
-    getPendingMatchesList(visibleMatches),
+    getPendingMatchesList(visibleMatches)
   );
   const totalPoints = calculateTotalPoints(visibleMatches);
   const exactScores = calculateExactScores(visibleMatches);
   const resultHits = calculateResultHits(visibleMatches);
 
-  const currentUserName = user?.displayName || "Invitado";
+  const currentUserName = user?.displayName || 'Invitado';
 
   const currentUserForRanking = {
-    id: "current-user",
-    uid: user?.uid || "current-user",
+    id: 'current-user',
+    uid: user?.uid || 'current-user',
     name: currentUserName,
-    badge: "Tú",
+    badge: 'Tú',
     predictions: visibleMatches.reduce((accumulator, match) => {
       if (!match.userPrediction) {
         return accumulator;
@@ -256,7 +264,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   const memberPredictions =
     activeLeagueMemberIds.length > 0
       ? leaguePredictions.filter((prediction) =>
-          activeLeagueMemberIds.includes(prediction.userId),
+          activeLeagueMemberIds.includes(prediction.userId)
         )
       : leaguePredictions;
 
@@ -291,34 +299,34 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
   const leagueAdminUsers =
     hasActiveLeague && userProfiles.length > 0
-      ? userProfiles.map((profile) => {
-          const profileId = profile.uid || profile.id;
+    ? userProfiles.map((profile) => {
+        const profileId = profile.uid || profile.id;
 
-          const userPredictions = memberPredictions.filter(
-            (prediction) => prediction.userId === profileId,
-          );
+        const userPredictions = memberPredictions.filter(
+          (prediction) => prediction.userId === profileId
+        );
 
-          const predictionsMap = userPredictions.reduce(
-            (accumulator, predictionDoc) => {
-              return {
-                ...accumulator,
-                [predictionDoc.matchId]: predictionDoc.prediction,
-              };
-            },
-            {},
-          );
+        const predictionsMap = userPredictions.reduce(
+          (accumulator, predictionDoc) => {
+            return {
+              ...accumulator,
+              [predictionDoc.matchId]: predictionDoc.prediction,
+            };
+          },
+          {}
+        );
 
-          return {
-            id: profileId,
-            uid: profileId,
-            name: profile.displayName || "Usuario",
-            badge: profileId === user?.uid ? "Tú" : "Participante",
-            predictions: predictionsMap,
-          };
-        })
-      : hasActiveLeague
-        ? [currentUserForRanking]
-        : [];
+        return {
+          id: profileId,
+          uid: profileId,
+          name: profile.displayName || 'Usuario',
+          badge: profileId === user?.uid ? 'Tú' : 'Participante',
+          predictions: predictionsMap,
+        };
+      })
+    : hasActiveLeague
+      ? [currentUserForRanking]
+      : [];
 
   const currentUserPosition = getUserRankingPosition(ranking, currentUserName);
 
@@ -335,8 +343,8 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
         : [];
 
   function handleChangeSection(sectionId) {
-    if (sectionId === "admin" && !isLeagueOwner) {
-      setActiveSection("home");
+    if (sectionId === 'admin' && !isLeagueOwner) {
+      setActiveSection('home');
       return;
     }
 
@@ -346,7 +354,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   function applyUserPredictionsToMatches(matchesToUpdate, userPredictions) {
     return matchesToUpdate.map((match) => {
       const prediction = userPredictions.find(
-        (userPrediction) => userPrediction.matchId === match.id,
+        (userPrediction) => userPrediction.matchId === match.id
       );
 
       if (!prediction) {
@@ -390,7 +398,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
         });
       }
     } catch (error) {
-      console.error("Error cargando ligas del usuario:", error);
+      console.error('Error cargando ligas del usuario:', error);
       setUserLeagues([]);
     } finally {
       setIsLoadingLeagues(false);
@@ -398,7 +406,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   }
 
   async function loadLeagueMembers() {
-    if (!activeLeagueId || activeLeagueId === "default") {
+    if (!activeLeagueId || activeLeagueId === 'default') {
       setLeagueMembers([]);
       return;
     }
@@ -407,13 +415,13 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       const members = await getLeagueMembers(activeLeagueId);
       setLeagueMembers(Array.isArray(members) ? members : []);
     } catch (error) {
-      console.error("Error cargando miembros de la liga:", error);
+      console.error('Error cargando miembros de la liga:', error);
       setLeagueMembers([]);
     }
   }
 
   async function loadLeaguePredictions() {
-    if (!activeLeagueId || activeLeagueId === "default") {
+    if (!activeLeagueId || activeLeagueId === 'default') {
       setLeaguePredictions([]);
       return;
     }
@@ -422,13 +430,13 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       const predictions = await getLeaguePredictions(activeLeagueId);
       setLeaguePredictions(predictions);
     } catch (error) {
-      console.error("Error cargando predicciones de la liga:", error);
+      console.error('Error cargando predicciones de la liga:', error);
       setLeaguePredictions([]);
     }
   }
 
   async function loadUserProfiles() {
-    if (!activeLeagueId || activeLeagueId === "default") {
+    if (!activeLeagueId || activeLeagueId === 'default') {
       setUserProfiles([]);
       return;
     }
@@ -442,13 +450,13 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       const profiles = await getUsersProfilesByIds(activeLeagueMemberIds);
       setUserProfiles(profiles);
     } catch (error) {
-      console.error("Error cargando perfiles de miembros:", error);
+      console.error('Error cargando perfiles de miembros:', error);
       setUserProfiles([]);
     }
   }
 
   async function loadLeaguePrizes() {
-    if (!activeLeagueId || activeLeagueId === "default") {
+    if (!activeLeagueId || activeLeagueId === 'default') {
       setLeaguePrizes(initialPrizes);
       return;
     }
@@ -465,7 +473,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
       setLeaguePrizes(initialPrizes);
     } catch (error) {
-      console.error("Error cargando premios de la liga:", error);
+      console.error('Error cargando premios de la liga:', error);
       setLeaguePrizes(initialPrizes);
     } finally {
       setIsLoadingPrizes(false);
@@ -473,10 +481,10 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   }
 
   async function loadLeagueMatches() {
-    if (!activeLeagueId || activeLeagueId === "default") {
+    if (!activeLeagueId || activeLeagueId === 'default') {
       const localMatches = getStorageItem(
         matchesStorageKey,
-        cleanBaseMatches(initialMatches),
+        cleanBaseMatches(initialMatches)
       );
 
       setMatchesByLeague((prevMatchesByLeague) => ({
@@ -502,7 +510,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       if (firestoreMatches.length > 0) {
         const matchesWithPredictions = applyUserPredictionsToMatches(
           firestoreMatches,
-          userPredictions,
+          userPredictions
         );
 
         setMatchesByLeague((prevMatchesByLeague) => ({
@@ -516,12 +524,12 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
       const localMatches = getStorageItem(
         matchesStorageKey,
-        cleanBaseMatches(initialMatches),
+        cleanBaseMatches(initialMatches)
       );
 
       const localMatchesWithPredictions = applyUserPredictionsToMatches(
         localMatches,
-        userPredictions,
+        userPredictions
       );
 
       setMatchesByLeague((prevMatchesByLeague) => ({
@@ -529,11 +537,11 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
         [activeLeagueId]: localMatchesWithPredictions,
       }));
     } catch (error) {
-      console.error("Error cargando partidos desde Firestore:", error);
+      console.error('Error cargando partidos desde Firestore:', error);
 
       const localMatches = getStorageItem(
         matchesStorageKey,
-        cleanBaseMatches(initialMatches),
+        cleanBaseMatches(initialMatches)
       );
 
       setMatchesByLeague((prevMatchesByLeague) => ({
@@ -557,8 +565,8 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       loadLeaguePredictions();
       loadLeaguePrizes();
       loadLeagueMembers();
-      setActiveMatchFilter("all");
-      setMatchSearchTerm("");
+      setActiveMatchFilter('all');
+      setMatchSearchTerm('');
     });
   }, [activeLeagueId, user?.uid]);
 
@@ -566,11 +574,11 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     queueMicrotask(() => {
       loadUserProfiles();
     });
-  }, [activeLeagueId, activeLeagueMemberIds.join("|")]);
+  }, [activeLeagueId, activeLeagueMemberIds.join('|')]);
 
   async function handleJoinLeague({ leagueCode }) {
     if (!user?.uid) {
-      throw new Error("USER_NOT_AUTHENTICATED");
+      throw new Error('USER_NOT_AUTHENTICATED');
     }
 
     const league = await joinLeague({
@@ -599,76 +607,80 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   }
 
   async function handleCreateLeague({ name, code, entryFee, prizeMode }) {
-    if (!user?.uid) {
-      throw new Error("USER_NOT_AUTHENTICATED");
-    }
-
-    const league = await createLeague({
-      name,
-      code,
-      ownerId: user.uid,
-      ownerDisplayName: user.displayName,
-      ownerEmail: user.email,
-      entryFee,
-      prizeMode,
-    });
-
-    onUpdateUser({
-      leagueCode: league.code,
-      activeLeagueId: league.id,
-      leagueName: league.name,
-    });
-
-    setIsCreateLeagueModalOpen(false);
-
-    await loadUserLeagues();
-    await loadUserProfiles();
-    await loadLeagueMembers();
+  if (!user?.uid) {
+    throw new Error('USER_NOT_AUTHENTICATED');
   }
+
+  const league = await createLeague({
+    name,
+    code,
+    ownerId: user.uid,
+    ownerDisplayName: user.displayName,
+    ownerEmail: user.email,
+    entryFee,
+    prizeMode,
+  });
+
+  onUpdateUser({
+    leagueCode: league.code,
+    activeLeagueId: league.id,
+    leagueName: league.name,
+  });
+
+  setIsCreateLeagueModalOpen(false);
+
+  await loadUserLeagues();
+  await loadUserProfiles();
+  await loadLeagueMembers();
+}
 
   async function handleSyncFootballDataMatches() {
-    if (!isLeagueOwner) {
-      alert("Solo el administrador puede sincronizar partidos.");
-      return;
-    }
-
-    if (!activeLeagueId || activeLeagueId === "default") {
-      alert("Primero selecciona o crea una liga.");
-      return;
-    }
-
-    try {
-      const result = await syncFootballDataMatches({
-        leagueId: activeLeagueId,
-      });
-
-      await loadLeagueMatches();
-      await loadLeaguePredictions();
-
-      if (result.total === 0) {
-        alert(
-          "La API respondió correctamente, pero aún no encontró partidos 2026.",
-        );
-        return;
-      }
-
-      alert(
-        `Sincronización completada:\n${result.total} partidos encontrados.\n${result.finishedMatches || 0} resultados oficiales actualizados.`,
-      );
-    } catch (error) {
-      console.error("Error sincronizando football-data:", error);
-      alert("No se pudieron sincronizar los partidos desde la API.");
-    }
+  if (!isLeagueOwner) {
+    alert('Solo el administrador puede sincronizar partidos.');
+    return;
   }
+
+  if (!activeLeagueId || activeLeagueId === 'default') {
+    alert('Primero selecciona o crea una liga.');
+    return;
+  }
+
+  try {
+    const result = await syncFootballDataMatches({
+      leagueId: activeLeagueId,
+    });
+
+    await loadLeagueMatches();
+    await loadLeaguePredictions();
+
+    if (result.total === 0) {
+      alert(
+        'La API respondió correctamente, pero aún no encontró partidos 2026.'
+      );
+      return;
+    }
+
+    alert(
+  `Sincronización completada:\n${result.total} partidos encontrados.\n${result.finishedMatches || 0} resultados oficiales actualizados.`
+);
+  } catch (error) {
+  console.error('Error sincronizando football-data:', error);
+
+  alert(
+    error.message ||
+      'No se pudieron sincronizar los partidos desde la API.'
+  );
+}
+}
 
   async function handleSavePrizes(prizesToSave) {
     if (!isLeagueOwner) {
-      alert("Solo el administrador puede editar premios.");
+      alert('Solo el administrador puede editar premios.');
       return;
     }
 
-    if (!activeLeagueId || activeLeagueId === "default") {
-      alert("Primero selecciona o crea una liga.");
+    if (!activeLeagueId || activeLeagueId === 'default') {
+      alert('Primero selecciona o crea una liga.');
       return;
     }
 
@@ -680,19 +692,19 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
       await loadLeaguePrizes();
     } catch (error) {
-      console.error("Error guardando premios:", error);
-      alert("No se pudieron guardar los premios.");
+      console.error('Error guardando premios:', error);
+      alert('No se pudieron guardar los premios.');
     }
   }
 
   async function handleSavePrizeSettings({ entryFee, prizeMode }) {
     if (!isLeagueOwner) {
-      alert("Solo el administrador puede editar reglas de premio.");
+      alert('Solo el administrador puede editar reglas de premio.');
       return;
     }
 
-    if (!activeLeagueId || activeLeagueId === "default") {
-      alert("Primero selecciona o crea una liga.");
+    if (!activeLeagueId || activeLeagueId === 'default') {
+      alert('Primero selecciona o crea una liga.');
       return;
     }
 
@@ -707,10 +719,10 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       await loadLeagueMembers();
       await loadLeaguePrizes();
 
-      alert("Reglas de premio actualizadas correctamente.");
+      alert('Reglas de premio actualizadas correctamente.');
     } catch (error) {
-      console.error("Error guardando reglas de premio:", error);
-      alert("No se pudieron guardar las reglas de premio.");
+      console.error('Error guardando reglas de premio:', error);
+      alert('No se pudieron guardar las reglas de premio.');
     }
   }
 
@@ -721,17 +733,17 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       leagueName: league.name,
     });
 
-    setActiveSection("home");
+    setActiveSection('home');
   }
 
   async function handleSavePrediction(matchId, prediction) {
     if (!user?.uid) {
-      alert("Debes iniciar sesión para guardar pronósticos.");
+      alert('Debes iniciar sesión para guardar pronósticos.');
       return;
     }
 
     if (!hasActiveLeague) {
-      alert("Primero debes unirte a una liga.");
+      alert('Primero debes unirte a una liga.');
       return;
     }
 
@@ -770,16 +782,16 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       await loadLeaguePredictions();
       await loadUserProfiles();
     } catch (error) {
-      console.error("Error guardando predicción en Firestore:", error);
+      console.error('Error guardando predicción en Firestore:', error);
       alert(
-        "Tu pronóstico no pudo sincronizarse correctamente. Intenta nuevamente.",
+        'Tu pronóstico no pudo sincronizarse correctamente. Intenta nuevamente.'
       );
     }
   }
 
   async function handleSaveResult(matchId, result) {
     if (!isLeagueOwner) {
-      alert("Solo el administrador puede actualizar resultados.");
+      alert('Solo el administrador puede actualizar resultados.');
       return;
     }
 
@@ -807,7 +819,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       };
     });
 
-    if (!activeLeagueId || activeLeagueId === "default") {
+    if (!activeLeagueId || activeLeagueId === 'default') {
       return;
     }
 
@@ -821,16 +833,16 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       await loadLeagueMatches();
       await loadLeaguePredictions();
     } catch (error) {
-      console.error("Error guardando resultado en Firestore:", error);
+      console.error('Error guardando resultado en Firestore:', error);
       alert(
-        "El resultado no pudo sincronizarse correctamente. Intenta nuevamente.",
+        'El resultado no pudo sincronizarse correctamente. Intenta nuevamente.'
       );
     }
   }
 
   async function handleClearResult(matchId) {
     if (!isLeagueOwner) {
-      alert("Solo el administrador puede quitar resultados.");
+      alert('Solo el administrador puede quitar resultados.');
       return;
     }
 
@@ -858,7 +870,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       };
     });
 
-    if (!activeLeagueId || activeLeagueId === "default") {
+    if (!activeLeagueId || activeLeagueId === 'default') {
       return;
     }
 
@@ -872,10 +884,10 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       await loadLeagueMatches();
       await loadLeaguePredictions();
 
-      alert("Resultado quitado correctamente.");
+      alert('Resultado quitado correctamente.');
     } catch (error) {
-      console.error("Error quitando resultado:", error);
-      alert("No se pudo quitar el resultado.");
+      console.error('Error quitando resultado:', error);
+      alert('No se pudo quitar el resultado.');
     }
   }
 
@@ -890,7 +902,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       />
 
       <main className="mx-auto max-w-6xl px-4 pb-32 pt-5 md:pb-8 md:pt-8">
-        {activeSection === "home" && (
+        {activeSection === 'home' && (
           <div className="space-y-4">
             <section className="rounded-[1.5rem] border border-white/70 bg-white/80 p-4 shadow-xl shadow-slate-200/70 backdrop-blur sm:rounded-[2rem] sm:p-5">
               <p className="text-sm font-bold text-emerald-700">
@@ -955,61 +967,61 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                       {user?.leagueCode
                         ? user?.leagueName ||
                           `Código: ${user.leagueCode.toUpperCase()}`
-                        : "Aún no estás en una liga"}
+                        : 'Aún no estás en una liga'}
                     </h2>
 
                     <p className="mt-1 text-sm leading-6 text-slate-500">
                       {user?.leagueCode
                         ? `Código: ${user.leagueCode.toUpperCase()}`
-                        : "Puedes explorar el dashboard y unirte cuando tengas un código de invitación."}
+                        : 'Puedes explorar el dashboard y unirte cuando tengas un código de invitación.'}
                     </p>
 
                     {user?.leagueCode && (
                       <p className="mt-1 text-xs font-bold text-slate-400">
                         {isLeagueOwner
-                          ? "Tienes permisos para administrar partidos y resultados."
-                          : "Puedes capturar pronósticos y consultar rankings."}
+                          ? 'Tienes permisos para administrar partidos y resultados.'
+                          : 'Puedes capturar pronósticos y consultar rankings.'}
                       </p>
                     )}
                   </div>
                 </div>
 
                 {user?.leagueCode ? (
-                  <div className="flex flex-col gap-2 sm:items-end">
-                    <div className="flex items-center gap-2 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700">
-                      <KeyRound size={18} />
-                      Liga activa
-                    </div>
+  <div className="flex flex-col gap-2 sm:items-end">
+    <div className="flex items-center gap-2 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700">
+      <KeyRound size={18} />
+      Liga activa
+    </div>
 
-                    <div
-                      className={`rounded-2xl px-4 py-2 text-xs font-black ${
-                        isLeagueOwner
-                          ? "bg-slate-950 text-white"
-                          : "bg-slate-100 text-slate-600"
-                      }`}
-                    >
-                      {isLeagueOwner ? "Administrador" : "Participante"}
-                    </div>
+    <div
+      className={`rounded-2xl px-4 py-2 text-xs font-black ${
+        isLeagueOwner
+          ? 'bg-slate-950 text-white'
+          : 'bg-slate-100 text-slate-600'
+      }`}
+    >
+      {isLeagueOwner ? 'Administrador' : 'Participante'}
+    </div>
 
-                    <div className="grid w-full gap-2 sm:w-auto sm:grid-cols-2">
-                      <button
-                        type="button"
-                        onClick={() => setIsJoinLeagueModalOpen(true)}
-                        className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
-                      >
-                        Unirme a otra
-                      </button>
+    <div className="grid w-full gap-2 sm:w-auto sm:grid-cols-2">
+      <button
+        type="button"
+        onClick={() => setIsJoinLeagueModalOpen(true)}
+        className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+      >
+        Unirme a otra
+      </button>
 
-                      <button
-                        type="button"
-                        onClick={() => setIsCreateLeagueModalOpen(true)}
-                        className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-700"
-                      >
-                        Crear otra
-                      </button>
-                    </div>
-                  </div>
-                ) : (
+      <button
+        type="button"
+        onClick={() => setIsCreateLeagueModalOpen(true)}
+        className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-700"
+      >
+        Crear otra
+      </button>
+    </div>
+  </div>
+) : (
                   <button
                     type="button"
                     onClick={() => setIsJoinLeagueModalOpen(true)}
@@ -1028,16 +1040,16 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                   prizes={leaguePrizes}
                   participantCount={totalLeagueMembers}
                   entryFee={activeLeague?.entryFee || 200}
-                  prizeMode={activeLeague?.prizeMode || "fixed"}
+                  prizeMode={activeLeague?.prizeMode || 'fixed'}
                   ranking={ranking}
-                  onOpenPrizes={() => setActiveSection("prizes")}
+                  onOpenPrizes={() => setActiveSection('prizes')}
                 />
 
                 <PendingMatchesCard
                   pendingMatches={pendingMatchesList}
                   onSelectStage={(stageId) => {
                     setActiveStageId(stageId);
-                    setActiveSection("matches");
+                    setActiveSection('matches');
                   }}
                 />
 
@@ -1046,7 +1058,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                   matches={visibleMatches}
                   onSelectStage={(stageId) => {
                     setActiveStageId(stageId);
-                    setActiveSection("matches");
+                    setActiveSection('matches');
                   }}
                 />
 
@@ -1060,7 +1072,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                   activeLeagueId={activeLeagueId}
                   onSelectStage={(stageId) => {
                     setActiveStageId(stageId);
-                    setActiveSection("ranking");
+                    setActiveSection('ranking');
                   }}
                 />
 
@@ -1083,7 +1095,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
           </div>
         )}
 
-        {activeSection === "matches" && (
+        {activeSection === 'matches' && (
           <>
             {!hasActiveLeague ? (
               <EmptyLeagueState
@@ -1110,42 +1122,38 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                   />
                 </div>
 
+                
                 <StageStatsBanner stage={activeStage} matches={stageMatches} />
                 <section className="rounded-[1.5rem] border border-emerald-100 bg-emerald-50 p-4 shadow-sm">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-sm font-black text-emerald-700">
-                        Avance de tus pronósticos
-                      </p>
+  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <p className="text-sm font-black text-emerald-700">
+        Avance de tus pronósticos
+      </p>
 
-                      <h3 className="mt-1 text-2xl font-black text-slate-950">
-                        {stageCompletedPredictions} de {stageTotalMatches}{" "}
-                        partidos llenados
-                      </h3>
+      <h3 className="mt-1 text-2xl font-black text-slate-950">
+        {stageCompletedPredictions} de {stageTotalMatches} partidos llenados
+      </h3>
 
-                      <p className="mt-1 text-sm font-bold text-slate-500">
-                        Te faltan {stagePendingMatches} partidos por capturar en
-                        esta etapa.
-                      </p>
-                    </div>
+      <p className="mt-1 text-sm font-bold text-slate-500">
+        Te faltan {stagePendingMatches} partidos por capturar en esta etapa.
+      </p>
+    </div>
 
-                    <div className="rounded-2xl bg-white px-4 py-3 text-center shadow-sm">
-                      <p className="text-xs font-black uppercase tracking-widest text-slate-400">
-                        Progreso
-                      </p>
+    <div className="rounded-2xl bg-white px-4 py-3 text-center shadow-sm">
+      <p className="text-xs font-black uppercase tracking-widest text-slate-400">
+        Progreso
+      </p>
 
-                      <p className="text-2xl font-black text-emerald-700">
-                        {stageTotalMatches > 0
-                          ? Math.round(
-                              (stageCompletedPredictions / stageTotalMatches) *
-                                100,
-                            )
-                          : 0}
-                        %
-                      </p>
-                    </div>
-                  </div>
-                </section>
+      <p className="text-2xl font-black text-emerald-700">
+        {stageTotalMatches > 0
+          ? Math.round((stageCompletedPredictions / stageTotalMatches) * 100)
+          : 0}
+        %
+      </p>
+    </div>
+  </div>
+</section>
 
                 {isGroupStage && (
                   <GroupStandingsCard groupStandings={groupStandings} />
@@ -1179,9 +1187,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                       <input
                         type="search"
                         value={matchSearchTerm}
-                        onChange={(event) =>
-                          setMatchSearchTerm(event.target.value)
-                        }
+                        onChange={(event) => setMatchSearchTerm(event.target.value)}
                         placeholder="Buscar por equipo, estadio o grupo..."
                         className="w-full bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-slate-400"
                       />
@@ -1231,7 +1237,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                             ))}
                           </div>
                         </article>
-                      ),
+                      )
                     )}
                   </section>
                 ) : (
@@ -1263,7 +1269,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
           </>
         )}
 
-        {activeSection === "ranking" && (
+        {activeSection === 'ranking' && (
           <>
             {!hasActiveLeague ? (
               <EmptyLeagueState
@@ -1292,7 +1298,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
           </>
         )}
 
-        {activeSection === "history" && (
+        {activeSection === 'history' && (
           <>
             {!hasActiveLeague ? (
               <EmptyLeagueState
@@ -1305,7 +1311,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
           </>
         )}
 
-        {activeSection === "compare" && (
+        {activeSection === 'compare' && (
           <>
             {!hasActiveLeague ? (
               <EmptyLeagueState
@@ -1321,7 +1327,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
           </>
         )}
 
-        {activeSection === "prizes" && (
+        {activeSection === 'prizes' && (
           <>
             {!hasActiveLeague ? (
               <EmptyLeagueState
@@ -1347,7 +1353,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                   participantCount={totalLeagueMembers}
                   entryFee={activeLeague?.entryFee || 200}
                   useDynamicPrize={
-                    activeLeague?.prizeMode === "winner_takes_all"
+                    activeLeague?.prizeMode === 'winner_takes_all'
                   }
                   ranking={ranking}
                 />
@@ -1356,7 +1362,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
           </>
         )}
 
-        {activeSection === "admin" && isLeagueOwner && (
+        {activeSection === 'admin' && isLeagueOwner && (
           <div className="space-y-4">
             <section className="rounded-[1.5rem] border border-white/70 bg-white/80 p-4 shadow-xl shadow-slate-200/70 backdrop-blur sm:rounded-[2rem] sm:p-5">
               <p className="text-sm font-bold text-emerald-700">
@@ -1364,7 +1370,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
               </p>
 
               <h2 className="mt-1 text-3xl font-black tracking-tight text-slate-950">
-                Panel de {user?.leagueName || user?.leagueCode || "liga"}
+                Panel de {user?.leagueName || user?.leagueCode || 'liga'}
               </h2>
 
               <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
@@ -1374,21 +1380,21 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
             </section>
 
             <AdminPanelCard
-              users={leagueAdminUsers}
-              matches={visibleMatches}
-              members={safeLeagueMembers}
-              entryFee={activeLeague?.entryFee || 0}
-              prizeMode={activeLeague?.prizeMode || "fixed"}
-              onOpenResultModal={() => setIsResultModalOpen(true)}
-              onOpenCreateLeagueModal={() => setIsCreateLeagueModalOpen(true)}
-              onOpenPrizeEditorModal={() => setIsPrizeEditorModalOpen(true)}
-              onOpenPrizeSettingsModal={() => setIsPrizeSettingsModalOpen(true)}
-              onSyncFootballDataMatches={handleSyncFootballDataMatches}
-            />
+  users={leagueAdminUsers}
+  matches={visibleMatches}
+  members={safeLeagueMembers}
+  entryFee={activeLeague?.entryFee || 0}
+  prizeMode={activeLeague?.prizeMode || 'fixed'}
+  onOpenResultModal={() => setIsResultModalOpen(true)}
+  onOpenCreateLeagueModal={() => setIsCreateLeagueModalOpen(true)}
+  onOpenPrizeEditorModal={() => setIsPrizeEditorModalOpen(true)}
+  onOpenPrizeSettingsModal={() => setIsPrizeSettingsModalOpen(true)}
+  onSyncFootballDataMatches={handleSyncFootballDataMatches}
+/>
           </div>
         )}
 
-        {activeSection === "admin" && !isLeagueOwner && (
+        {activeSection === 'admin' && !isLeagueOwner && (
           <section className="rounded-[2rem] border border-slate-200 bg-white p-6 text-center shadow-sm">
             <p className="text-sm font-bold text-emerald-700">
               Acceso restringido
@@ -1405,7 +1411,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
             <button
               type="button"
-              onClick={() => setActiveSection("home")}
+              onClick={() => setActiveSection('home')}
               className="mt-5 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:bg-slate-800"
             >
               Volver al inicio
@@ -1415,7 +1421,9 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
         {hasActiveLeague && (
           <section className="mt-4 rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-5">
-            <p className="text-sm font-bold text-emerald-700">Reglas rápidas</p>
+            <p className="text-sm font-bold text-emerald-700">
+              Reglas rápidas
+            </p>
 
             <h2 className="mt-1 text-xl font-black text-slate-950 sm:text-2xl">
               Puntuación
@@ -1423,8 +1431,8 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
             <div className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
               <p>
-                <strong className="text-slate-950">+1 punto</strong> si aciertas
-                ganador o empate.
+                <strong className="text-slate-950">+1 punto</strong> si
+                aciertas ganador o empate.
               </p>
 
               <p>
@@ -1465,7 +1473,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       />
 
       <PrizeEditorModal
-        key={`${activeLeagueId}-${isPrizeEditorModalOpen ? "open" : "closed"}`}
+        key={`${activeLeagueId}-${isPrizeEditorModalOpen ? 'open' : 'closed'}`}
         isOpen={isPrizeEditorModalOpen}
         onClose={() => setIsPrizeEditorModalOpen(false)}
         prizes={leaguePrizes}
@@ -1477,7 +1485,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
         isOpen={isPrizeSettingsModalOpen}
         onClose={() => setIsPrizeSettingsModalOpen(false)}
         entryFee={activeLeague?.entryFee || 200}
-        prizeMode={activeLeague?.prizeMode || "fixed"}
+        prizeMode={activeLeague?.prizeMode || 'fixed'}
         onSaveSettings={handleSavePrizeSettings}
       />
     </div>
