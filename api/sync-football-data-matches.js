@@ -76,25 +76,34 @@ function getTeamName(team) {
 
 function normalizeMatch(match) {
   const isFinished = match.status === "FINISHED";
+  const normalizedStage = normalizeStage(match.stage);
 
   return {
     id: `football-data-${match.id}`,
     externalId: String(match.id),
-    stage: normalizeStage(match.stage),
-    stageId: normalizeStage(match.stage),
+
+    // Guardamos ambos:
+    // stage = etapa original de la API
+    // stageId = etapa normalizada para tu app
+    stage: match.stage || "UNKNOWN_STAGE",
+    stageId: normalizedStage,
+
     group: match.group || match.stage || "Grupo sin asignar",
     groupName: match.group || match.stage || "Grupo sin asignar",
+
     homeTeam: getTeamName(match.homeTeam),
     awayTeam: getTeamName(match.awayTeam),
     date: match.utcDate,
     stadium: match.venue || "Por definir",
     isLocked: new Date(match.utcDate).getTime() <= Date.now(),
+
     result: isFinished
       ? {
           homeScore: Number(match.score?.fullTime?.home ?? 0),
           awayScore: Number(match.score?.fullTime?.away ?? 0),
         }
       : null,
+
     source: "football-data",
     status: match.status,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -112,14 +121,16 @@ async function fetchWorldCupMatches() {
       headers: {
         "X-Auth-Token": process.env.FOOTBALL_DATA_TOKEN,
       },
-    },
+    }
   );
 
-  if (!response.ok) {
-    throw new Error(`FOOTBALL_DATA_ERROR_${response.status}`);
-  }
-
   const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data?.message || data?.error || `FOOTBALL_DATA_ERROR_${response.status}`
+    );
+  }
 
   return Array.isArray(data.matches) ? data.matches : [];
 }
@@ -169,6 +180,131 @@ async function validateLeagueOwner({ request, db, leagueId }) {
   };
 }
 
+function hasResultChanged(currentResult, newResult) {
+  // Si la API no trae resultado, NO cambiamos nada.
+  // Esto protege resultados manuales existentes.
+  if (!newResult) {
+    return false;
+  }
+
+  if (!currentResult) {
+    return true;
+  }
+
+  return (
+    Number(currentResult.homeScore) !== Number(newResult.homeScore) ||
+    Number(currentResult.awayScore) !== Number(newResult.awayScore)
+  );
+}
+
+function hasMatchChanged(currentMatch = {}, newMatch = {}) {
+  // Si no existe en Firestore, sí se debe crear.
+  if (!currentMatch.id) {
+    return true;
+  }
+
+  const fieldsToCompare = [
+    "externalId",
+    "stage",
+    "stageId",
+    "group",
+    "groupName",
+    "homeTeam",
+    "awayTeam",
+    "date",
+    "stadium",
+    "isLocked",
+    "source",
+    "status",
+  ];
+
+  const basicFieldChanged = fieldsToCompare.some((field) => {
+    return currentMatch[field] !== newMatch[field];
+  });
+
+  if (basicFieldChanged) {
+    return true;
+  }
+
+  return hasResultChanged(currentMatch.result, newMatch.result);
+}
+
+async function syncLeagueMatches({ db, leagueId, normalizedMatches }) {
+  const leagueRef = db.collection("leagues").doc(leagueId);
+  const matchesCollectionRef = leagueRef.collection("matches");
+
+  const existingMatchesSnapshot = await matchesCollectionRef.get();
+
+  const existingMatchesMap = existingMatchesSnapshot.docs.reduce(
+    (accumulator, doc) => {
+      return {
+        ...accumulator,
+        [doc.id]: doc.data(),
+      };
+    },
+    {}
+  );
+
+  const batch = db.batch();
+
+  let changedMatches = 0;
+  let createdMatches = 0;
+  let updatedMatches = 0;
+
+  normalizedMatches.forEach((match) => {
+    const currentMatch = existingMatchesMap[match.id];
+
+    if (!hasMatchChanged(currentMatch, match)) {
+      return;
+    }
+
+    const matchRef = matchesCollectionRef.doc(match.id);
+
+    const matchDataToSave = {
+      ...match,
+      userPrediction: admin.firestore.FieldValue.delete(),
+    };
+
+    // Si la API aún no tiene resultado, no borramos el resultado existente.
+    if (match.result === null) {
+      delete matchDataToSave.result;
+    }
+
+    batch.set(matchRef, matchDataToSave, {
+      merge: true,
+    });
+
+    changedMatches += 1;
+
+    if (!currentMatch) {
+      createdMatches += 1;
+    } else {
+      updatedMatches += 1;
+    }
+  });
+
+  batch.set(
+    leagueRef,
+    {
+      lastFootballDataSyncAt: admin.firestore.FieldValue.serverTimestamp(),
+      lastFootballDataSyncChangedMatches: changedMatches,
+      lastFootballDataSyncCreatedMatches: createdMatches,
+      lastFootballDataSyncUpdatedMatches: updatedMatches,
+    },
+    {
+      merge: true,
+    }
+  );
+
+  await batch.commit();
+
+  return {
+    changedMatches,
+    createdMatches,
+    updatedMatches,
+  };
+}
+
 export default async function handler(request, response) {
   try {
     if (request.method !== "POST") {
@@ -204,36 +340,21 @@ export default async function handler(request, response) {
       return response.status(200).json({
         ok: true,
         total: 0,
+        changedMatches: 0,
+        createdMatches: 0,
+        updatedMatches: 0,
         finishedMatches: 0,
         pendingMatches: 0,
         message: "NO_MATCHES_FOUND",
       });
     }
 
-    const batch = db.batch();
-
-    normalizedMatches.forEach((match) => {
-      const matchRef = db
-        .collection("leagues")
-        .doc(leagueId)
-        .collection("matches")
-        .doc(match.id);
-
-      const matchDataToSave = {
-        ...match,
-        userPrediction: admin.firestore.FieldValue.delete(),
-      };
-
-      if (match.result === null) {
-        delete matchDataToSave.result;
-      }
-
-      batch.set(matchRef, matchDataToSave, {
-        merge: true,
+    const { changedMatches, createdMatches, updatedMatches } =
+      await syncLeagueMatches({
+        db,
+        leagueId,
+        normalizedMatches,
       });
-    });
-
-    await batch.commit();
 
     const finishedMatches = normalizedMatches.filter((match) => {
       return match.result !== null;
@@ -242,8 +363,15 @@ export default async function handler(request, response) {
     return response.status(200).json({
       ok: true,
       total: normalizedMatches.length,
+      changedMatches,
+      createdMatches,
+      updatedMatches,
       finishedMatches,
       pendingMatches: normalizedMatches.length - finishedMatches,
+      message:
+        changedMatches > 0
+          ? `Sincronización completada. Se actualizaron ${changedMatches} partidos.`
+          : "Sincronización revisada. No hubo cambios nuevos.",
     });
   } catch (error) {
     console.error("SYNC_FOOTBALL_DATA_FAILED:", error);
