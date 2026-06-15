@@ -1423,7 +1423,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       </div>
     </div>
 
-    <div className="grid gap-2 md:grid-cols-2">
+    <div className="grid grid-cols-2 gap-2">
       {selectedGroupMatches.map((match) => (
         <CompactMatchCard
           key={match.id}
@@ -1434,7 +1434,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     </div>
   </section>
 ) : (
-                  <section className="grid gap-2 sm:grid-cols-2">
+                  <section className="grid grid-cols-2 gap-2">
                     {!isLoadingMatches &&
                       filteredStageMatches.map((match) => (
                         <CompactMatchCard
