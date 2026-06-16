@@ -204,6 +204,8 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
   const [leagueMembers, setLeagueMembers] = useState([]);
 
+  const [isSyncingFootballData, setIsSyncingFootballData] = useState(false);
+
   const activeLeagueId = user?.activeLeagueId || user?.leagueCode || 'default';
   const hasActiveLeague = Boolean(activeLeagueId && activeLeagueId !== 'default');
   const matchesStorageKey = getLeagueMatchesStorageKey(activeLeagueId);
@@ -735,40 +737,65 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   }
 
   async function handleSyncFootballDataMatches() {
-    if (!isLeagueOwner) {
-      alert('Solo el administrador puede sincronizar partidos.');
-      return;
-    }
-
-    if (!activeLeagueId || activeLeagueId === 'default') {
-      alert('Primero selecciona o crea una liga.');
-      return;
-    }
-
-    try {
-      const result = await syncFootballDataMatches({
-        leagueId: activeLeagueId,
-      });
-
-      await loadLeagueMatches();
-      await loadLeaguePredictions();
-
-      if (result.total === 0) {
-        alert(
-          'La API respondió correctamente, pero aún no encontró partidos 2026.'
-        );
-        return;
-      }
-
-      alert(
-        result.message ||
-          `Sincronización completada:\n${result.total} partidos encontrados.\n${result.finishedMatches || 0} resultados oficiales actualizados.`
-      );
-    } catch (error) {
-      console.error('Error sincronizando football-data:', error);
-      alert(error.message || 'No se pudieron sincronizar los partidos desde la API.');
-    }
+  if (isSyncingFootballData) {
+    return;
   }
+
+  if (!isLeagueOwner) {
+    alert('Solo el administrador puede sincronizar partidos.');
+    return;
+  }
+
+  if (!activeLeagueId || activeLeagueId === 'default') {
+    alert('Primero selecciona o crea una liga.');
+    return;
+  }
+
+  const lastSyncKey = `last-football-data-sync-${activeLeagueId}`;
+  const lastSyncAt = Number(localStorage.getItem(lastSyncKey) || 0);
+  const now = Date.now();
+  const tenMinutes = 10 * 60 * 1000;
+
+  if (lastSyncAt && now - lastSyncAt < tenMinutes) {
+    const remainingMinutes = Math.ceil((tenMinutes - (now - lastSyncAt)) / 60000);
+
+    alert(
+      `Para proteger la cuota de Firebase, espera ${remainingMinutes} minuto(s) antes de volver a sincronizar.`
+    );
+
+    return;
+  }
+
+  setIsSyncingFootballData(true);
+
+  try {
+    const result = await syncFootballDataMatches({
+      leagueId: activeLeagueId,
+    });
+
+    localStorage.setItem(lastSyncKey, String(Date.now()));
+
+    await loadLeagueMatches();
+    await loadLeaguePredictions();
+
+    if (result.total === 0) {
+      alert(
+        'La API respondió correctamente, pero aún no encontró partidos 2026.'
+      );
+      return;
+    }
+
+    alert(
+      result.message ||
+        `Sincronización completada:\n${result.total} partidos encontrados.\n${result.finishedMatches || 0} resultados oficiales actualizados.`
+    );
+  } catch (error) {
+    console.error('Error sincronizando football-data:', error);
+    alert(error.message || 'No se pudieron sincronizar los partidos desde la API.');
+  } finally {
+    setIsSyncingFootballData(false);
+  }
+}
 
   async function handleSavePrizes(prizesToSave) {
     if (!isLeagueOwner) {
@@ -1573,17 +1600,18 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
             </section>
 
             <AdminPanelCard
-              users={leagueAdminUsers}
-              matches={visibleMatches}
-              members={safeLeagueMembers}
-              entryFee={activeLeague?.entryFee || 0}
-              prizeMode={activeLeague?.prizeMode || 'fixed'}
-              onOpenResultModal={() => setIsResultModalOpen(true)}
-              onOpenCreateLeagueModal={() => setIsCreateLeagueModalOpen(true)}
-              onOpenPrizeEditorModal={() => setIsPrizeEditorModalOpen(true)}
-              onOpenPrizeSettingsModal={() => setIsPrizeSettingsModalOpen(true)}
-              onSyncFootballDataMatches={handleSyncFootballDataMatches}
-            />
+  users={leagueAdminUsers}
+  matches={visibleMatches}
+  members={safeLeagueMembers}
+  entryFee={activeLeague?.entryFee || 0}
+  prizeMode={activeLeague?.prizeMode || 'fixed'}
+  isSyncingFootballData={isSyncingFootballData}
+  onOpenResultModal={() => setIsResultModalOpen(true)}
+  onOpenCreateLeagueModal={() => setIsCreateLeagueModalOpen(true)}
+  onOpenPrizeEditorModal={() => setIsPrizeEditorModalOpen(true)}
+  onOpenPrizeSettingsModal={() => setIsPrizeSettingsModalOpen(true)}
+  onSyncFootballDataMatches={handleSyncFootballDataMatches}
+/>
           </div>
         )}
 

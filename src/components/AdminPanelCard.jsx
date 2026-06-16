@@ -40,6 +40,7 @@ function AdminPanelCard({
   onOpenPrizeSettingsModal,
   onSeedMatches,
   onSyncFootballDataMatches,
+  isSyncingFootballData = false,
 }) {
   const totalMatches = matches.length;
   const totalMembers = members.length;
@@ -215,13 +216,19 @@ function AdminPanelCard({
         </button>
 
         <button
-          type="button"
-          onClick={onSyncFootballDataMatches}
-          className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-blue-300 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-blue-200"
-        >
-          <DatabaseZap size={18} />
-          Sincronizar API
-        </button>
+  type="button"
+  onClick={onSyncFootballDataMatches}
+  disabled={isSyncingFootballData}
+  className={`rounded-2xl px-4 py-3 text-sm font-black transition ${
+    isSyncingFootballData
+      ? 'cursor-not-allowed bg-slate-200 text-slate-400'
+      : 'bg-emerald-600 text-white hover:bg-emerald-700'
+  }`}
+>
+  {isSyncingFootballData
+    ? 'Sincronizando...'
+    : 'Sincronizar partidos desde API'}
+</button>
 
         <button
           type="button"

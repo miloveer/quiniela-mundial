@@ -305,6 +305,22 @@ async function syncLeagueMatches({ db, leagueId, normalizedMatches }) {
   };
 }
 
+function canSyncAgain(lastSyncAt) {
+  if (!lastSyncAt) {
+    return true;
+  }
+
+  const lastSyncDate =
+    typeof lastSyncAt.toDate === 'function'
+      ? lastSyncAt.toDate()
+      : new Date(lastSyncAt);
+
+  const now = Date.now();
+  const tenMinutes = 10 * 60 * 1000;
+
+  return now - lastSyncDate.getTime() >= tenMinutes;
+}
+
 export default async function handler(request, response) {
   try {
     if (request.method !== "POST") {
@@ -327,11 +343,20 @@ export default async function handler(request, response) {
 
     const db = admin.firestore();
 
-    await validateLeagueOwner({
-      request,
-      db,
-      leagueId,
-    });
+    const { league } = await validateLeagueOwner({
+  request,
+  db,
+  leagueId,
+});
+
+if (!canSyncAgain(league.lastFootballDataSyncAt)) {
+  return response.status(429).json({
+    ok: false,
+    error: 'SYNC_COOLDOWN_ACTIVE',
+    message:
+      'Para proteger la cuota de Firebase, espera unos minutos antes de volver a sincronizar.',
+  });
+}
 
     const apiMatches = await fetchWorldCupMatches();
     const normalizedMatches = apiMatches.map(normalizeMatch);
