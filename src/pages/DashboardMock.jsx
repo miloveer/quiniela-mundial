@@ -25,6 +25,7 @@ import StageRankingPreviewCard from '../components/StageRankingPreviewCard';
 import GroupStandingsCard from '../components/GroupStandingsCard';
 
 import { getUsersProfilesByIds } from '../services/userService';
+import {ensureSupabaseProfile} from '../services/supabaseProfileService';
 import { syncFootballDataMatches } from '../services/footballDataSyncService';
 
 import {
@@ -81,6 +82,8 @@ import {
   getStageMatches,
   sortMatchesByStatusAndDate,
 } from '../utils/matchUtils';
+
+
 
 function cleanBaseMatches(matches = []) {
   return matches.map((match) => ({
@@ -656,10 +659,18 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   }
 
   useEffect(() => {
-    queueMicrotask(() => {
-      loadUserLeagues();
-    });
-  }, [user?.uid]);
+  queueMicrotask(async () => {
+    if (user?.uid) {
+      try {
+        await ensureSupabaseProfile(user);
+      } catch (error) {
+        console.error('Error creando perfil en Supabase:', error);
+      }
+    }
+
+    loadUserLeagues();
+  });
+}, [user?.uid]);
 
   useEffect(() => {
     queueMicrotask(() => {
