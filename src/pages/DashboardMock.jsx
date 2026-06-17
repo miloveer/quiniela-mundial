@@ -30,13 +30,13 @@ import { syncFootballDataMatches } from '../services/footballDataSyncService';
 
 
 import {
-  createLeague,
-  getLeagueByCode,
-  getLeagueMembers,
-  getUserLeagues,
-  joinLeague,
-  updateLeaguePrizeSettings,
-} from '../services/leagueService';
+  createSupabaseLeague as createLeague,
+  getSupabaseLeagueByCode as getLeagueByCode,
+  getSupabaseLeagueMembers as getLeagueMembers,
+  getSupabaseUserLeagues as getUserLeagues,
+  joinSupabaseLeague as joinLeague,
+  updateSupabaseLeaguePrizeSettings as updateLeaguePrizeSettings,
+} from '../services/supabaseLeagueService';
 
 import {
   getLeaguePredictions,
