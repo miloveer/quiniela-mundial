@@ -28,6 +28,7 @@ import { getUsersProfilesByIds } from '../services/userService';
 import {ensureSupabaseProfile} from '../services/supabaseProfileService';
 import { syncFootballDataMatches } from '../services/footballDataSyncService';
 
+
 import {
   createLeague,
   getLeagueByCode,
@@ -1085,7 +1086,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                 resultHits={resultHits}
               />
             )}
-
+            
             <section className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-5">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
