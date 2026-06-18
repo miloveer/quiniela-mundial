@@ -1724,16 +1724,6 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       onSyncFootballDataMatches={handleSyncFootballDataMatches}
       onSeedSupabaseMatches={handleSeedSupabaseMatches}
     />
-
-    <section className="rounded-[1.5rem] border border-purple-200 bg-purple-50 p-4 shadow-sm">
-      <p className="text-sm font-black text-purple-700">
-        Migración temporal
-      </p>
-
-      <p className="mt-1 text-sm text-purple-700">
-        Este botón solo se usará una vez para pasar la liga familiar vieja de Firebase a Supabase.
-      </p>
-    </section>
   </div>
 )}
 
