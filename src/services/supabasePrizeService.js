@@ -42,15 +42,36 @@ export async function saveSupabaseLeaguePrizes({ leagueId, prizes }) {
     throw new Error('INVALID_PRIZES');
   }
 
-  const prizesToSave = prizes.map((prize, index) => ({
-    league_id: leagueId,
-    position: Number(prize.position || index + 1),
-    title: prize.title || `${index + 1}° lugar`,
-    description: prize.description || '',
-    amount: Number(prize.amount || 0),
-    percentage: Number(prize.percentage || 0),
-    updated_at: new Date().toISOString(),
-  }));
+  const validPrizes = prizes.filter((prize) => {
+    const hasTitle = Boolean(prize?.title?.trim?.());
+    const hasDescription = Boolean(prize?.description?.trim?.());
+    const hasAmount = Number(prize?.amount || 0) > 0;
+    const hasPercentage = Number(prize?.percentage || 0) > 0;
+
+    return hasTitle || hasDescription || hasAmount || hasPercentage;
+  });
+
+  if (validPrizes.length === 0) {
+    return [];
+  }
+
+  const prizesToSave = validPrizes.map((prize, index) => {
+    const safePosition = Number.isFinite(Number(prize?.position))
+      ? Number(prize.position)
+      : index + 1;
+
+    return {
+      league_id: leagueId,
+      position: safePosition > 0 ? safePosition : index + 1,
+      title: prize?.title?.trim() || `${index + 1}° lugar`,
+      description: prize?.description?.trim() || '',
+      amount: Number(prize?.amount || 0),
+      percentage: Number(prize?.percentage || 0),
+      updated_at: new Date().toISOString(),
+    };
+  });
+
+  console.log('SAVE_SUPABASE_LEAGUE_PRIZES_PAYLOAD:', prizesToSave);
 
   const { data, error } = await supabase
     .from('prizes')

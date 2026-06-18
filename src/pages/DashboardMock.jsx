@@ -24,8 +24,7 @@ import StageProgressCard from '../components/StageProgressCard';
 import StageRankingPreviewCard from '../components/StageRankingPreviewCard';
 import GroupStandingsCard from '../components/GroupStandingsCard';
 
-import { getUsersProfilesByIds } from '../services/userService';
-import {ensureSupabaseProfile} from '../services/supabaseProfileService';
+import { ensureSupabaseProfile } from '../services/supabaseProfileService';
 import { syncFootballDataMatches } from '../services/footballDataSyncService';
 
 
@@ -50,7 +49,10 @@ import {
   updateSupabaseMatchResult as updateMatchResult,
 } from '../services/supabaseMatchService';
 
-import { getLeaguePrizes, saveLeaguePrizes } from '../services/prizeService';
+import {
+  getSupabaseLeaguePrizes as getLeaguePrizes,
+  saveSupabaseLeaguePrizes as saveLeaguePrizes,
+} from '../services/supabasePrizeService';
 
 import {
   matches as initialMatches,
@@ -96,6 +98,34 @@ function cleanBaseMatches(matches = []) {
     userPrediction: null,
     result: null,
   }));
+}
+
+function getPredictionScores(prediction = {}) {
+  const rawHomeScore =
+    prediction.homeScore ??
+    prediction.home_score ??
+    prediction.localScore ??
+    prediction.home ??
+    prediction.homeGoals;
+
+  const rawAwayScore =
+    prediction.awayScore ??
+    prediction.away_score ??
+    prediction.visitorScore ??
+    prediction.away ??
+    prediction.awayGoals;
+
+  const homeScore = Number(rawHomeScore);
+  const awayScore = Number(rawAwayScore);
+
+  if (!Number.isFinite(homeScore) || !Number.isFinite(awayScore)) {
+    return null;
+  }
+
+  return {
+    homeScore,
+    awayScore,
+  };
 }
 
 function EmptyLeagueState({ onJoinLeague, onCreateLeague }) {
@@ -420,7 +450,10 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
             (accumulator, predictionDoc) => {
               return {
                 ...accumulator,
-                [predictionDoc.matchId]: predictionDoc.prediction,
+                [predictionDoc.matchId]: {
+                  homeScore: Number(predictionDoc.homeScore),
+                  awayScore: Number(predictionDoc.awayScore),
+                },
               };
             },
             {}
@@ -553,18 +586,20 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       return;
     }
 
-    if (activeLeagueMemberIds.length === 0) {
+    if (safeLeagueMembers.length === 0) {
       setUserProfiles([]);
       return;
     }
 
-    try {
-      const profiles = await getUsersProfilesByIds(activeLeagueMemberIds);
-      setUserProfiles(profiles);
-    } catch (error) {
-      console.error('Error cargando perfiles de miembros:', error);
-      setUserProfiles([]);
-    }
+    const profiles = safeLeagueMembers.map((member) => ({
+      id: member.uid || member.id,
+      uid: member.uid || member.id,
+      displayName: member.displayName || member.name || member.email || 'Usuario',
+      email: member.email || '',
+      role: member.role || 'member',
+    }));
+
+    setUserProfiles(profiles);
   }
 
   async function loadLeaguePrizes() {
@@ -576,10 +611,10 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     setIsLoadingPrizes(true);
 
     try {
-      const firestorePrizes = await getLeaguePrizes(activeLeagueId);
+      const prizesFromSupabase = await getLeaguePrizes(activeLeagueId);
 
-      if (firestorePrizes.length > 0) {
-        setLeaguePrizes(firestorePrizes);
+      if (prizesFromSupabase.length > 0) {
+        setLeaguePrizes(prizesFromSupabase);
         return;
       }
 
@@ -817,7 +852,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     const remainingMinutes = Math.ceil((tenMinutes - (now - lastSyncAt)) / 60000);
 
     alert(
-      `Para proteger la cuota de Firebase, espera ${remainingMinutes} minuto(s) antes de volver a sincronizar.`
+      `Para proteger la cuota de la API, espera ${remainingMinutes} minuto(s) antes de volver a sincronizar.`
     );
 
     return;
@@ -928,6 +963,13 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       return;
     }
 
+    const predictionScores = getPredictionScores(prediction);
+
+    if (!predictionScores) {
+      alert('Captura un marcador válido.');
+      return;
+    }
+
     setMatchesByLeague((prevMatchesByLeague) => {
       const currentMatches =
         prevMatchesByLeague[activeLeagueId] ??
@@ -940,7 +982,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
         return {
           ...match,
-          userPrediction: prediction,
+          userPrediction: predictionScores,
         };
       });
 
@@ -954,13 +996,14 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
     try {
       await savePrediction({
-  leagueId: activeLeagueId,
-  matchId,
-  userId: user.uid,
-  homeScore: Number(prediction.homeScore),
-  awayScore: Number(prediction.awayScore),
-});
+        leagueId: activeLeagueId,
+        matchId,
+        userId: user.uid,
+        homeScore: predictionScores.homeScore,
+        awayScore: predictionScores.awayScore,
+      });
 
+      await loadLeagueMatches();
       await loadLeaguePredictions();
       await loadUserProfiles();
     } catch (error) {
@@ -1015,7 +1058,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       await loadLeagueMatches();
       await loadLeaguePredictions();
     } catch (error) {
-      console.error('Error guardando resultado en Firestore:', error);
+      console.error('Error guardando resultado en Supabase:', error);
       alert(
         'El resultado no pudo sincronizarse correctamente. Intenta nuevamente.'
       );
