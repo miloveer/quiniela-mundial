@@ -1,13 +1,24 @@
 import { supabase } from './supabaseClient';
 
 function normalizePredictionFromSupabase(prediction) {
+  const normalizedPrediction = {
+    homeScore: Number(prediction.home_score),
+    awayScore: Number(prediction.away_score),
+  };
+
   return {
     id: prediction.id,
     leagueId: prediction.league_id,
     matchId: prediction.match_id,
     userId: prediction.user_id,
-    homeScore: Number(prediction.home_score),
-    awayScore: Number(prediction.away_score),
+
+    // Formato directo
+    homeScore: normalizedPrediction.homeScore,
+    awayScore: normalizedPrediction.awayScore,
+
+    // Formato que espera el ranking/admin
+    prediction: normalizedPrediction,
+
     createdAt: prediction.created_at,
     updatedAt: prediction.updated_at,
   };

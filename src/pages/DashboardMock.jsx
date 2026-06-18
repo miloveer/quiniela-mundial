@@ -507,11 +507,15 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       return {
         ...match,
         userPrediction: userPrediction
-          ? {
-              homeScore: Number(userPrediction.homeScore),
-              awayScore: Number(userPrediction.awayScore),
-            }
-          : match.userPrediction || null,
+  ? {
+      homeScore: Number(
+        userPrediction.prediction?.homeScore ?? userPrediction.homeScore
+      ),
+      awayScore: Number(
+        userPrediction.prediction?.awayScore ?? userPrediction.awayScore
+      ),
+    }
+  : match.userPrediction || null,
       };
     });
   }
