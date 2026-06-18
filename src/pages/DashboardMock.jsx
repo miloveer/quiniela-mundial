@@ -90,40 +90,13 @@ import {
 } from "../utils/matchUtils";
 
 
+
 function cleanBaseMatches(matches = []) {
   return matches.map((match) => ({
     ...match,
     userPrediction: null,
     result: null,
   }));
-}
-
-function getPredictionScores(prediction = {}) {
-  const rawHomeScore =
-    prediction.homeScore ??
-    prediction.home_score ??
-    prediction.localScore ??
-    prediction.home ??
-    prediction.homeGoals;
-
-  const rawAwayScore =
-    prediction.awayScore ??
-    prediction.away_score ??
-    prediction.visitorScore ??
-    prediction.away ??
-    prediction.awayGoals;
-
-  const homeScore = Number(rawHomeScore);
-  const awayScore = Number(rawAwayScore);
-
-  if (!Number.isFinite(homeScore) || !Number.isFinite(awayScore)) {
-    return null;
-  }
-
-  return {
-    homeScore,
-    awayScore,
-  };
 }
 
 function EmptyLeagueState({ onJoinLeague, onCreateLeague }) {
@@ -905,6 +878,10 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       alert("Primero selecciona o crea una liga.");
       return;
     }
+    if (activeLeague?.predictionsLocked) {
+  alert('La quiniela ya fue cerrada. Ya no se pueden editar pronósticos.');
+  return;
+}
 
     try {
       await saveLeaguePrizes({
@@ -959,66 +936,74 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   }
 
   async function handleSavePrediction(matchId, prediction) {
-    if (!user?.uid) {
-      alert("Debes iniciar sesión para guardar pronósticos.");
-      return;
-    }
+  if (!user?.uid) {
+    alert('Debes iniciar sesión para guardar pronósticos.');
+    return;
+  }
 
-    if (!hasActiveLeague) {
-      alert("Primero debes unirte a una liga.");
-      return;
-    }
+  if (!hasActiveLeague) {
+    alert('Primero debes unirte a una liga.');
+    return;
+  }
 
-    const predictionScores = getPredictionScores(prediction);
+  if (activeLeague?.predictionsLocked) {
+    alert('La quiniela ya fue cerrada. Ya no se pueden editar pronósticos.');
+    return;
+  }
 
-    if (!predictionScores) {
-      alert("Captura un marcador válido.");
-      return;
-    }
+  setMatchesByLeague((prevMatchesByLeague) => {
+    const currentMatches =
+      prevMatchesByLeague[activeLeagueId] ??
+      getStorageItem(matchesStorageKey, cleanBaseMatches(initialMatches));
 
-    setMatchesByLeague((prevMatchesByLeague) => {
-      const currentMatches =
-        prevMatchesByLeague[activeLeagueId] ??
-        getStorageItem(matchesStorageKey, cleanBaseMatches(initialMatches));
-
-      const updatedMatches = currentMatches.map((match) => {
-        if (match.id !== matchId) {
-          return match;
-        }
-
-        return {
-          ...match,
-          userPrediction: predictionScores,
-        };
-      });
-
-      setStorageItem(matchesStorageKey, updatedMatches);
+    const updatedMatches = currentMatches.map((match) => {
+      if (match.id !== matchId) {
+        return match;
+      }
 
       return {
-        ...prevMatchesByLeague,
-        [activeLeagueId]: updatedMatches,
+        ...match,
+        userPrediction: prediction,
       };
     });
 
-    try {
-      await savePrediction({
-        leagueId: activeLeagueId,
-        matchId,
-        userId: user.uid,
-        homeScore: predictionScores.homeScore,
-        awayScore: predictionScores.awayScore,
-      });
+    setStorageItem(matchesStorageKey, updatedMatches);
 
+    return {
+      ...prevMatchesByLeague,
+      [activeLeagueId]: updatedMatches,
+    };
+  });
+
+  try {
+    await savePrediction({
+      leagueId: activeLeagueId,
+      matchId,
+      userId: user.uid,
+      homeScore: Number(prediction.homeScore),
+      awayScore: Number(prediction.awayScore),
+    });
+
+    await loadLeaguePredictions();
+    await loadUserProfiles();
+  } catch (error) {
+    console.error('Error guardando predicción en Supabase:', error);
+
+    if (
+      error?.code === '42501' ||
+      error?.message?.includes('row-level security')
+    ) {
+      alert('La quiniela ya fue cerrada. Ya no se pueden editar pronósticos.');
       await loadLeagueMatches();
       await loadLeaguePredictions();
-      await loadUserProfiles();
-    } catch (error) {
-      console.error("Error guardando predicción en Supabase:", error);
-      alert(
-        "Tu pronóstico no pudo sincronizarse correctamente. Intenta nuevamente.",
-      );
+      return;
     }
+
+    alert(
+      'Tu pronóstico no pudo sincronizarse correctamente. Intenta nuevamente.'
+    );
   }
+}
 
   async function handleSaveResult(matchId, result) {
     if (!isLeagueOwner) {
@@ -1567,6 +1552,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                           key={match.id}
                           match={match}
                           onSavePrediction={handleSavePrediction}
+                          predictionsLocked={Boolean(activeLeague?.predictionsLocked)}
                         />
                       ))}
                     </div>
@@ -1579,6 +1565,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                           key={match.id}
                           match={match}
                           onSavePrediction={handleSavePrediction}
+                          predictionsLocked={Boolean(activeLeague?.predictionsLocked)}
                         />
                       ))}
                   </section>
@@ -1726,7 +1713,6 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     />
   </div>
 )}
-
         {activeSection === "admin" && !isLeagueOwner && (
           <section className="rounded-[2rem] border border-slate-200 bg-white p-6 text-center shadow-sm">
             <p className="text-sm font-bold text-emerald-700">
@@ -1781,6 +1767,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
               <p>Los pronósticos se bloquean cuando inicia el partido.</p>
             </div>
           </section>
+          
         )}
       </main>
 

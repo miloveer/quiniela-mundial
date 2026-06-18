@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { getTeamDisplayName, getTeamFlag } from '../utils/teamUtils';
 import { formatMatchDate } from '../utils/matchUtils';
 
-function CompactMatchCard({ match, onSavePrediction }) {
+function CompactMatchCard({
+  match,
+  onSavePrediction,
+  predictionsLocked = false,
+}) {
   const [homeScore, setHomeScore] = useState(
     match.userPrediction?.homeScore ?? ''
   );
@@ -14,19 +18,43 @@ function CompactMatchCard({ match, onSavePrediction }) {
   const hasPrediction = Boolean(match.userPrediction);
   const hasResult = Boolean(match.result);
   const isLocked = Boolean(match.isLocked);
+  const isPredictionBlocked = predictionsLocked || isLocked || hasResult;
 
   const homeName = getTeamDisplayName(match.homeTeam);
   const awayName = getTeamDisplayName(match.awayTeam);
 
   function handleSave() {
+    if (predictionsLocked) {
+      alert('La quiniela ya fue cerrada. Ya no se pueden editar pronósticos.');
+      return;
+    }
+
+    if (isLocked || hasResult) {
+      alert('Este partido ya está cerrado.');
+      return;
+    }
+
     if (homeScore === '' || awayScore === '') {
       alert('Captura ambos marcadores.');
       return;
     }
 
+    const parsedHomeScore = Number(homeScore);
+    const parsedAwayScore = Number(awayScore);
+
+    if (
+      Number.isNaN(parsedHomeScore) ||
+      Number.isNaN(parsedAwayScore) ||
+      parsedHomeScore < 0 ||
+      parsedAwayScore < 0
+    ) {
+      alert('Los marcadores deben ser números válidos mayores o iguales a 0.');
+      return;
+    }
+
     onSavePrediction(match.id, {
-      homeScore: Number(homeScore),
-      awayScore: Number(awayScore),
+      homeScore: parsedHomeScore,
+      awayScore: parsedAwayScore,
     });
   }
 
@@ -35,9 +63,11 @@ function CompactMatchCard({ match, onSavePrediction }) {
       className={`rounded-2xl border p-2 shadow-sm ${
         hasResult
           ? 'border-slate-300 bg-slate-50'
-          : hasPrediction
-            ? 'border-emerald-200 bg-emerald-50/60'
-            : 'border-slate-200 bg-white'
+          : predictionsLocked
+            ? 'border-slate-300 bg-slate-100'
+            : hasPrediction
+              ? 'border-emerald-200 bg-emerald-50/60'
+              : 'border-slate-200 bg-white'
       }`}
     >
       <div className="mb-2 flex items-center justify-between gap-2">
@@ -49,20 +79,24 @@ function CompactMatchCard({ match, onSavePrediction }) {
           className={`rounded-full px-2 py-1 text-[10px] font-black ${
             hasResult
               ? 'bg-slate-950 text-white'
-              : hasPrediction
-                ? 'bg-emerald-100 text-emerald-700'
-                : isLocked
-                  ? 'bg-rose-100 text-rose-700'
-                  : 'bg-slate-100 text-slate-500'
+              : predictionsLocked
+                ? 'bg-slate-200 text-slate-600'
+                : hasPrediction
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : isLocked
+                    ? 'bg-rose-100 text-rose-700'
+                    : 'bg-slate-100 text-slate-500'
           }`}
         >
           {hasResult
             ? 'Final'
-            : hasPrediction
-              ? 'Listo'
-              : isLocked
-                ? 'Cerrado'
-                : 'Pendiente'}
+            : predictionsLocked
+              ? 'Quiniela cerrada'
+              : hasPrediction
+                ? 'Listo'
+                : isLocked
+                  ? 'Cerrado'
+                  : 'Pendiente'}
         </span>
       </div>
 
@@ -78,8 +112,8 @@ function CompactMatchCard({ match, onSavePrediction }) {
             min="0"
             value={homeScore}
             onChange={(event) => setHomeScore(event.target.value)}
-            disabled={isLocked || hasResult}
-            className="h-8 w-10 rounded-xl border border-slate-200 bg-white text-center text-xs font-black text-slate-950 outline-none focus:border-emerald-400 disabled:bg-slate-100 sm:w-12 sm:text-sm"
+            disabled={isPredictionBlocked}
+            className="h-8 w-10 rounded-xl border border-slate-200 bg-white text-center text-xs font-black text-slate-950 outline-none focus:border-emerald-400 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 sm:w-12 sm:text-sm"
           />
         </div>
 
@@ -94,8 +128,8 @@ function CompactMatchCard({ match, onSavePrediction }) {
             min="0"
             value={awayScore}
             onChange={(event) => setAwayScore(event.target.value)}
-            disabled={isLocked || hasResult}
-            className="h-8 w-10 rounded-xl border border-slate-200 bg-white text-center text-xs font-black text-slate-950 outline-none focus:border-emerald-400 disabled:bg-slate-100 sm:w-12 sm:text-sm"
+            disabled={isPredictionBlocked}
+            className="h-8 w-10 rounded-xl border border-slate-200 bg-white text-center text-xs font-black text-slate-950 outline-none focus:border-emerald-400 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 sm:w-12 sm:text-sm"
           />
         </div>
       </div>
@@ -110,12 +144,13 @@ function CompactMatchCard({ match, onSavePrediction }) {
             {hasPrediction
               ? `${match.userPrediction.homeScore} - ${match.userPrediction.awayScore}`
               : 'Sin capturar'}
+
             {hasResult &&
               ` · Oficial ${match.result.homeScore} - ${match.result.awayScore}`}
           </p>
         </div>
 
-        {!isLocked && !hasResult && (
+        {!isPredictionBlocked && (
           <button
             type="button"
             onClick={handleSave}
@@ -125,6 +160,12 @@ function CompactMatchCard({ match, onSavePrediction }) {
           </button>
         )}
       </div>
+
+      {predictionsLocked && !hasResult && (
+        <div className="mt-3 rounded-xl bg-white px-3 py-2 text-center text-[10px] font-black uppercase tracking-wide text-slate-500">
+          La quiniela ya fue cerrada
+        </div>
+      )}
     </article>
   );
 }

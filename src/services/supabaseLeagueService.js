@@ -10,6 +10,7 @@ function normalizeLeagueFromSupabase(league, members = []) {
     ownerEmail: league.owner_email,
     entryFee: Number(league.entry_fee || 0),
     prizeMode: league.prize_mode || 'fixed',
+    predictionsLocked: Boolean(league.predictions_locked),
     members: members.map((member) => member.user_id),
     createdAt: league.created_at,
     updatedAt: league.updated_at,
