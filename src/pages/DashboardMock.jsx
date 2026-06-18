@@ -89,6 +89,7 @@ import {
   sortMatchesByStatusAndDate,
 } from "../utils/matchUtils";
 
+
 function cleanBaseMatches(matches = []) {
   return matches.map((match) => ({
     ...match,
@@ -155,6 +156,8 @@ function EmptyLeagueState({ onJoinLeague, onCreateLeague }) {
         >
           Crear liga
         </button>
+
+        
       </div>
     </section>
   );
@@ -1690,39 +1693,49 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
           </>
         )}
 
-        {activeSection === "admin" && isLeagueOwner && (
-          <div className="space-y-4">
-            <section className="rounded-[1.5rem] border border-white/70 bg-white/80 p-4 shadow-xl shadow-slate-200/70 backdrop-blur sm:rounded-[2rem] sm:p-5">
-              <p className="text-sm font-bold text-emerald-700">
-                Administración
-              </p>
+        {activeSection === 'admin' && isLeagueOwner && (
+  <div className="space-y-4">
+    <section className="rounded-[1.5rem] border border-white/70 bg-white/80 p-4 shadow-xl shadow-slate-200/70 backdrop-blur sm:rounded-[2rem] sm:p-5">
+      <p className="text-sm font-bold text-emerald-700">
+        Administración
+      </p>
 
-              <h2 className="mt-1 text-3xl font-black tracking-tight text-slate-950">
-                Panel de {user?.leagueName || user?.leagueCode || "liga"}
-              </h2>
+      <h2 className="mt-1 text-3xl font-black tracking-tight text-slate-950">
+        Panel de {user?.leagueName || user?.leagueCode || 'liga'}
+      </h2>
 
-              <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
-                Desde aquí puedes cargar partidos, revisar participantes y
-                actualizar resultados oficiales de la quiniela.
-              </p>
-            </section>
+      <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
+        Desde aquí puedes cargar partidos, revisar participantes y
+        actualizar resultados oficiales de la quiniela.
+      </p>
+    </section>
 
-            <AdminPanelCard
-              users={leagueAdminUsers}
-              matches={visibleMatches}
-              members={safeLeagueMembers}
-              entryFee={activeLeague?.entryFee || 0}
-              prizeMode={activeLeague?.prizeMode || "fixed"}
-              isSyncingFootballData={isSyncingFootballData}
-              onOpenResultModal={() => setIsResultModalOpen(true)}
-              onOpenCreateLeagueModal={() => setIsCreateLeagueModalOpen(true)}
-              onOpenPrizeEditorModal={() => setIsPrizeEditorModalOpen(true)}
-              onOpenPrizeSettingsModal={() => setIsPrizeSettingsModalOpen(true)}
-              onSyncFootballDataMatches={handleSyncFootballDataMatches}
-              onSeedSupabaseMatches={handleSeedSupabaseMatches}
-            />
-          </div>
-        )}
+    <AdminPanelCard
+      users={leagueAdminUsers}
+      matches={visibleMatches}
+      members={safeLeagueMembers}
+      entryFee={activeLeague?.entryFee || 0}
+      prizeMode={activeLeague?.prizeMode || 'fixed'}
+      isSyncingFootballData={isSyncingFootballData}
+      onOpenResultModal={() => setIsResultModalOpen(true)}
+      onOpenCreateLeagueModal={() => setIsCreateLeagueModalOpen(true)}
+      onOpenPrizeEditorModal={() => setIsPrizeEditorModalOpen(true)}
+      onOpenPrizeSettingsModal={() => setIsPrizeSettingsModalOpen(true)}
+      onSyncFootballDataMatches={handleSyncFootballDataMatches}
+      onSeedSupabaseMatches={handleSeedSupabaseMatches}
+    />
+
+    <section className="rounded-[1.5rem] border border-purple-200 bg-purple-50 p-4 shadow-sm">
+      <p className="text-sm font-black text-purple-700">
+        Migración temporal
+      </p>
+
+      <p className="mt-1 text-sm text-purple-700">
+        Este botón solo se usará una vez para pasar la liga familiar vieja de Firebase a Supabase.
+      </p>
+    </section>
+  </div>
+)}
 
         {activeSection === "admin" && !isLeagueOwner && (
           <section className="rounded-[2rem] border border-slate-200 bg-white p-6 text-center shadow-sm">
@@ -1746,6 +1759,8 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
             >
               Volver al inicio
             </button>
+
+            
           </section>
         )}
 
