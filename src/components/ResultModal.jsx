@@ -38,6 +38,16 @@ function ResultModal({
   }
 
   function handleSelectMatch(match) {
+    const isSameMatch = selectedMatchId === match.id;
+
+    if (isSameMatch) {
+      setSelectedMatchId('');
+      setHomeScore('');
+      setAwayScore('');
+      setErrorMessage('');
+      return;
+    }
+
     setSelectedMatchId(match.id);
     setHomeScore(match.result?.homeScore ?? '');
     setAwayScore(match.result?.awayScore ?? '');
@@ -64,7 +74,9 @@ function ResultModal({
       parsedHomeScore < 0 ||
       parsedAwayScore < 0
     ) {
-      setErrorMessage('Los marcadores deben ser números válidos mayores o iguales a 0.');
+      setErrorMessage(
+        'Los marcadores deben ser números válidos mayores o iguales a 0.'
+      );
       return;
     }
 
@@ -80,31 +92,31 @@ function ResultModal({
   }
 
   function handleClearSelectedResult() {
-  if (!selectedMatch) {
-    setErrorMessage('Selecciona un partido.');
-    return;
+    if (!selectedMatch) {
+      setErrorMessage('Selecciona un partido.');
+      return;
+    }
+
+    if (!selectedMatch.result) {
+      setErrorMessage('Este partido todavía no tiene resultado oficial.');
+      return;
+    }
+
+    const confirmClear = window.confirm(
+      '¿Seguro que quieres quitar el resultado oficial de este partido?'
+    );
+
+    if (!confirmClear) {
+      return;
+    }
+
+    onClearResult(selectedMatch.id);
+
+    setErrorMessage('');
+    setSelectedMatchId('');
+    setHomeScore('');
+    setAwayScore('');
   }
-
-  if (!selectedMatch.result) {
-    setErrorMessage('Este partido todavía no tiene resultado oficial.');
-    return;
-  }
-
-  const confirmClear = window.confirm(
-    '¿Seguro que quieres quitar el resultado oficial de este partido?'
-  );
-
-  if (!confirmClear) {
-    return;
-  }
-
-  onClearResult(selectedMatch.id);
-
-  setErrorMessage('');
-  setSelectedMatchId('');
-  setHomeScore('');
-  setAwayScore('');
-}
 
   function handleClose() {
     setSearchText('');
@@ -134,7 +146,7 @@ function ResultModal({
               </h2>
 
               <p className="mt-1 text-sm leading-6 text-slate-500">
-                Selecciona un partido, captura el resultado y el ranking se actualizará.
+                Selecciona un partido y captura el resultado debajo del mismo.
               </p>
             </div>
           </div>
@@ -149,48 +161,50 @@ function ResultModal({
           </button>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-          <section className="rounded-[1.5rem] bg-slate-50 p-4">
-            <label className="mb-4 block">
-              <span className="mb-1.5 block text-xs font-black text-slate-500">
-                Buscar partido
-              </span>
+        <section className="rounded-[1.5rem] bg-slate-50 p-4">
+          <label className="mb-4 block">
+            <span className="mb-1.5 block text-xs font-black text-slate-500">
+              Buscar partido
+            </span>
 
-              <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
-                <Search size={18} className="text-slate-400" />
+            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
+              <Search size={18} className="text-slate-400" />
 
-                <input
-                  type="text"
-                  value={searchText}
-                  onChange={(event) => setSearchText(event.target.value)}
-                  placeholder="Buscar por equipo o sede"
-                  className="w-full bg-transparent text-sm font-bold text-slate-900 outline-none placeholder:text-slate-400"
-                />
+              <input
+                type="text"
+                value={searchText}
+                onChange={(event) => setSearchText(event.target.value)}
+                placeholder="Buscar por equipo o sede"
+                className="w-full bg-transparent text-sm font-bold text-slate-900 outline-none placeholder:text-slate-400"
+              />
+            </div>
+          </label>
+
+          <div className="space-y-3">
+            {filteredMatches.length === 0 ? (
+              <div className="rounded-2xl bg-white p-4">
+                <p className="text-sm font-black text-slate-700">
+                  No hay partidos con ese filtro.
+                </p>
               </div>
-            </label>
+            ) : (
+              filteredMatches.map((match) => {
+                const isSelected = selectedMatchId === match.id;
+                const hasResult = Boolean(match.result);
 
-            <div className="space-y-3">
-              {filteredMatches.length === 0 ? (
-                <div className="rounded-2xl bg-white p-4">
-                  <p className="text-sm font-black text-slate-700">
-                    No hay partidos con ese filtro.
-                  </p>
-                </div>
-              ) : (
-                filteredMatches.map((match) => {
-                  const isSelected = selectedMatchId === match.id;
-                  const hasResult = Boolean(match.result);
-
-                  return (
+                return (
+                  <article
+                    key={match.id}
+                    className={`rounded-2xl border transition ${
+                      isSelected
+                        ? 'border-emerald-500 bg-emerald-50'
+                        : 'border-slate-200 bg-white'
+                    }`}
+                  >
                     <button
-                      key={match.id}
                       type="button"
                       onClick={() => handleSelectMatch(match)}
-                      className={`w-full rounded-2xl border p-4 text-left transition ${
-                        isSelected
-                          ? 'border-emerald-500 bg-emerald-50'
-                          : 'border-slate-200 bg-white hover:bg-slate-100'
-                      }`}
+                      className="w-full p-4 text-left"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -203,124 +217,129 @@ function ResultModal({
                           </p>
                         </div>
 
-                        <span
-                          className={`rounded-full px-3 py-1 text-xs font-black ${
-                            hasResult
-                              ? 'bg-slate-950 text-white'
-                              : 'bg-amber-50 text-amber-700'
-                          }`}
-                        >
-                          {hasResult ? 'Con resultado' : 'Pendiente'}
-                        </span>
+                        <div className="flex shrink-0 flex-col items-end gap-2">
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-black ${
+                              hasResult
+                                ? 'bg-slate-950 text-white'
+                                : 'bg-amber-50 text-amber-700'
+                            }`}
+                          >
+                            {hasResult ? 'Con resultado' : 'Pendiente'}
+                          </span>
+
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-black ${
+                              isSelected
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-slate-100 text-slate-500'
+                            }`}
+                          >
+                            {isSelected ? 'Editando' : 'Seleccionar'}
+                          </span>
+                        </div>
                       </div>
 
                       {hasResult && (
                         <p className="mt-2 text-sm font-black text-emerald-700">
-                          Resultado: {match.result.homeScore} - {match.result.awayScore}
+                          Resultado: {match.result.homeScore} -{' '}
+                          {match.result.awayScore}
                         </p>
                       )}
                     </button>
-                  );
-                })
-              )}
-            </div>
-          </section>
 
-          <section className="rounded-[1.5rem] border border-slate-200 bg-white p-4">
-            <p className="text-sm font-bold text-emerald-700">
-              Marcador oficial
-            </p>
+                    {isSelected && (
+                      <div className="border-t border-emerald-200 p-4 pt-3">
+                        <p className="text-sm font-bold text-emerald-700">
+                          Marcador oficial
+                        </p>
 
-            {selectedMatch ? (
-              <>
-                <h3 className="mt-1 text-xl font-black text-slate-950">
-                  {selectedMatch.homeTeam} vs {selectedMatch.awayTeam}
-                </h3>
+                        <h3 className="mt-1 text-lg font-black text-slate-950">
+                          {match.homeTeam} vs {match.awayTeam}
+                        </h3>
 
-                <p className="mt-1 text-xs font-bold text-slate-400">
-                  {formatMatchDate(selectedMatch.date)}
-                </p>
+                        <p className="mt-1 text-xs font-bold text-slate-400">
+                          {formatMatchDate(match.date)}
+                        </p>
 
-                <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                  <label className="block">
-                    <span className="mb-1.5 block text-center text-xs font-black text-slate-500">
-                      {selectedMatch.homeTeam}
-                    </span>
+                        <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                          <label className="block">
+                            <span className="mb-1.5 block text-center text-xs font-black text-slate-500">
+                              {match.homeTeam}
+                            </span>
 
-                    <input
-                      type="number"
-                      min="0"
-                      value={homeScore}
-                      onChange={(event) => setHomeScore(event.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center text-2xl font-black text-slate-950 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                      placeholder="0"
-                    />
-                  </label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={homeScore}
+                              onChange={(event) =>
+                                setHomeScore(event.target.value)
+                              }
+                              className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-center text-2xl font-black text-slate-950 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                              placeholder="0"
+                            />
+                          </label>
 
-                  <span className="pt-6 text-sm font-black text-slate-400">
-                    -
-                  </span>
+                          <span className="pt-6 text-sm font-black text-slate-400">
+                            -
+                          </span>
 
-                  <label className="block">
-                    <span className="mb-1.5 block text-center text-xs font-black text-slate-500">
-                      {selectedMatch.awayTeam}
-                    </span>
+                          <label className="block">
+                            <span className="mb-1.5 block text-center text-xs font-black text-slate-500">
+                              {match.awayTeam}
+                            </span>
 
-                    <input
-                      type="number"
-                      min="0"
-                      value={awayScore}
-                      onChange={(event) => setAwayScore(event.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center text-2xl font-black text-slate-950 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                      placeholder="0"
-                    />
-                  </label>
-                </div>
+                            <input
+                              type="number"
+                              min="0"
+                              value={awayScore}
+                              onChange={(event) =>
+                                setAwayScore(event.target.value)
+                              }
+                              className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-center text-2xl font-black text-slate-950 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                              placeholder="0"
+                            />
+                          </label>
+                        </div>
 
-                {errorMessage && (
-                  <div className="mt-4 rounded-2xl bg-rose-50 p-3 text-sm font-bold leading-6 text-rose-600">
-                    {errorMessage}
-                  </div>
-                )}
+                        {errorMessage && (
+                          <div className="mt-4 rounded-2xl bg-rose-50 p-3 text-sm font-bold leading-6 text-rose-600">
+                            {errorMessage}
+                          </div>
+                        )}
 
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-  <button
-    type="button"
-    onClick={handleSaveResult}
-    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700"
-  >
-    <Check size={18} />
-    Guardar resultado
-  </button>
+                        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                          <button
+                            type="button"
+                            onClick={handleSaveResult}
+                            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700"
+                          >
+                            <Check size={18} />
+                            Guardar resultado
+                          </button>
 
-  <button
-    type="button"
-    onClick={handleClearSelectedResult}
-    disabled={!selectedMatch?.result}
-    className={`flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-black transition ${
-      selectedMatch?.result
-        ? 'bg-rose-600 text-white hover:bg-rose-700'
-        : 'cursor-not-allowed bg-slate-200 text-slate-400'
-    }`}
-  >
-    <X size={18} />
-    Quitar resultado
-  </button>
-</div>
-              </>
-            ) : (
-              <div className="mt-4 rounded-2xl bg-slate-50 p-4">
-                <p className="text-sm font-black text-slate-700">
-                  Selecciona un partido.
-                </p>
-
-                <p className="mt-1 text-sm leading-6 text-slate-500">
-                  Al guardar el resultado oficial, se calcularán los puntos de los usuarios.
-                </p>
-              </div>
+                          <button
+                            type="button"
+                            onClick={handleClearSelectedResult}
+                            disabled={!match.result}
+                            className={`flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-black transition ${
+                              match.result
+                                ? 'bg-rose-600 text-white hover:bg-rose-700'
+                                : 'cursor-not-allowed bg-slate-200 text-slate-400'
+                            }`}
+                          >
+                            <X size={18} />
+                            Quitar resultado
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </article>
+                );
+              })
             )}
-          </section>
-        </div>
+          </div>
+        </section>
       </section>
     </div>
   );
