@@ -39,10 +39,10 @@ import {
 } from '../services/supabaseLeagueService';
 
 import {
-  getLeaguePredictions,
-  getUserPredictions,
-  savePrediction,
-} from '../services/predictionService';
+  getSupabaseLeaguePredictions as getLeaguePredictions,
+  getSupabaseUserPredictions as getUserPredictions,
+  saveSupabasePrediction as savePrediction,
+} from '../services/supabasePredictionService';
 
 import {
   getSupabaseLeagueMatches as getLeagueMatches,
@@ -461,25 +461,27 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     setActiveSection(sectionId);
   }
 
-  function applyUserPredictionsToMatches(matchesToUpdate, userPredictions) {
-    return matchesToUpdate.map((match) => {
-      const prediction = userPredictions.find(
-        (userPrediction) => userPrediction.matchId === match.id
-      );
+  function applyUserPredictionsToMatches(matchesToApply = [], userPredictions = []) {
+  const safeUserPredictions = Array.isArray(userPredictions)
+    ? userPredictions
+    : [];
 
-      if (!prediction) {
-        return {
-          ...match,
-          userPrediction: null,
-        };
-      }
+  return matchesToApply.map((match) => {
+    const userPrediction = safeUserPredictions.find(
+      (prediction) => prediction.matchId === match.id
+    );
 
-      return {
-        ...match,
-        userPrediction: prediction.prediction,
-      };
-    });
-  }
+    return {
+      ...match,
+      userPrediction: userPrediction
+        ? {
+            homeScore: Number(userPrediction.homeScore),
+            awayScore: Number(userPrediction.awayScore),
+          }
+        : match.userPrediction || null,
+    };
+  });
+}
 
   async function loadUserLeagues() {
     if (!user?.uid) {
@@ -610,12 +612,10 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     try {
       const supabaseMatches = await getLeagueMatches(activeLeagueId);
 
-      const userPredictions = user?.uid
-        ? await getUserPredictions({
-            leagueId: activeLeagueId,
-            userId: user.uid,
-          })
-        : [];
+      const userPredictions = await getUserPredictions({
+  leagueId: activeLeagueId,
+  userId: user.uid,
+});
 
       if (supabaseMatches.length > 0) {
         const matchesWithPredictions = applyUserPredictionsToMatches(
@@ -954,16 +954,17 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
     try {
       await savePrediction({
-        leagueId: activeLeagueId,
-        userId: user.uid,
-        matchId,
-        prediction,
-      });
+  leagueId: activeLeagueId,
+  matchId,
+  userId: user.uid,
+  homeScore: Number(prediction.homeScore),
+  awayScore: Number(prediction.awayScore),
+});
 
       await loadLeaguePredictions();
       await loadUserProfiles();
     } catch (error) {
-      console.error('Error guardando predicción en Firestore:', error);
+      console.error('Error guardando predicción en Supabase:', error);
       alert(
         'Tu pronóstico no pudo sincronizarse correctamente. Intenta nuevamente.'
       );

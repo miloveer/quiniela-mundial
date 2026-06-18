@@ -15,7 +15,7 @@ function normalizePredictionFromSupabase(prediction) {
 
 export async function getSupabaseUserPredictions({ leagueId, userId }) {
   if (!leagueId || !userId) {
-    return {};
+    return [];
   }
 
   const { data, error } = await supabase
@@ -29,14 +29,7 @@ export async function getSupabaseUserPredictions({ leagueId, userId }) {
     throw error;
   }
 
-  return (data || []).reduce((acc, prediction) => {
-    acc[prediction.match_id] = {
-      homeScore: Number(prediction.home_score),
-      awayScore: Number(prediction.away_score),
-    };
-
-    return acc;
-  }, {});
+  return (data || []).map(normalizePredictionFromSupabase);
 }
 
 export async function getSupabaseLeaguePredictions(leagueId) {
