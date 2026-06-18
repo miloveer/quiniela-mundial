@@ -44,7 +44,11 @@ import {
   savePrediction,
 } from '../services/predictionService';
 
-import { getLeagueMatches, updateMatchResult } from '../services/matchService';
+import {
+  getSupabaseLeagueMatches as getLeagueMatches,
+  saveSupabaseLeagueMatches,
+  updateSupabaseMatchResult as updateMatchResult,
+} from '../services/supabaseMatchService';
 
 import { getLeaguePrizes, saveLeaguePrizes } from '../services/prizeService';
 
@@ -604,7 +608,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     setIsLoadingMatches(true);
 
     try {
-      const firestoreMatches = await getLeagueMatches(activeLeagueId);
+      const supabaseMatches = await getLeagueMatches(activeLeagueId);
 
       const userPredictions = user?.uid
         ? await getUserPredictions({
@@ -613,9 +617,9 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
           })
         : [];
 
-      if (firestoreMatches.length > 0) {
+      if (supabaseMatches.length > 0) {
         const matchesWithPredictions = applyUserPredictionsToMatches(
-          firestoreMatches,
+          supabaseMatches,
           userPredictions
         );
 
@@ -643,7 +647,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
         [activeLeagueId]: localMatchesWithPredictions,
       }));
     } catch (error) {
-      console.error('Error cargando partidos desde Firestore:', error);
+      console.error('Error cargando partidos desde Supabase:', error);
 
       const localMatches = getStorageItem(
         matchesStorageKey,
@@ -747,6 +751,47 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     await loadUserProfiles();
     await loadLeagueMembers();
   }
+
+  async function handleSeedSupabaseMatches() {
+  if (!isLeagueOwner) {
+    alert('Solo el administrador puede cargar partidos.');
+    return;
+  }
+
+  if (!activeLeagueId || activeLeagueId === 'default') {
+    alert('Primero selecciona o crea una liga.');
+    return;
+  }
+
+  const confirmSeed = window.confirm(
+    'Esto cargará los partidos base en Supabase para esta liga. No borra pronósticos ni resultados existentes. ¿Continuar?'
+  );
+
+  if (!confirmSeed) {
+    return;
+  }
+
+  try {
+    const baseMatches = cleanBaseMatches(initialMatches);
+
+    const savedMatches = await saveSupabaseLeagueMatches({
+      leagueId: activeLeagueId,
+      matches: baseMatches,
+    });
+
+    setMatchesByLeague((prevMatchesByLeague) => ({
+      ...prevMatchesByLeague,
+      [activeLeagueId]: savedMatches,
+    }));
+
+    setStorageItem(matchesStorageKey, savedMatches);
+
+    alert(`Partidos cargados correctamente: ${savedMatches.length}`);
+  } catch (error) {
+    console.error('Error cargando partidos base en Supabase:', error);
+    alert(error.message || 'No se pudieron cargar los partidos base.');
+  }
+}
 
   async function handleSyncFootballDataMatches() {
   if (isSyncingFootballData) {
@@ -1623,6 +1668,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   onOpenPrizeEditorModal={() => setIsPrizeEditorModalOpen(true)}
   onOpenPrizeSettingsModal={() => setIsPrizeSettingsModalOpen(true)}
   onSyncFootballDataMatches={handleSyncFootballDataMatches}
+  onSeedSupabaseMatches={handleSeedSupabaseMatches}
 />
           </div>
         )}

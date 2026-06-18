@@ -2,7 +2,6 @@ import {
   CheckCircle2,
   ClipboardList,
   Coins,
-  DatabaseZap,
   PlusCircle,
   Settings2,
   Trophy,
@@ -29,18 +28,18 @@ function getPendingPredictionsByUser(user, matches) {
 }
 
 function AdminPanelCard({
-  users = [],
-  matches = [],
-  members = [],
-  entryFee = 0,
-  prizeMode = 'fixed',
+  users,
+  matches,
+  members,
+  entryFee,
+  prizeMode,
+  isSyncingFootballData = false,
   onOpenResultModal,
   onOpenCreateLeagueModal,
   onOpenPrizeEditorModal,
   onOpenPrizeSettingsModal,
-  onSeedMatches,
   onSyncFootballDataMatches,
-  isSyncingFootballData = false,
+  onSeedSupabaseMatches,
 }) {
   const totalMatches = matches.length;
   const totalMembers = members.length;
@@ -229,10 +228,19 @@ function AdminPanelCard({
     ? 'Sincronizando...'
     : 'Sincronizar partidos desde API'}
 </button>
+{onSeedSupabaseMatches && (
+  <button
+    type="button"
+    onClick={onSeedSupabaseMatches}
+    className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700 transition hover:bg-emerald-100"
+  >
+    Cargar partidos base en Supabase
+  </button>
+)}
 
         <button
           type="button"
-          onClick={onSeedMatches}
+          onClick={onSeedSupabaseMatches}
           className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-amber-300 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-amber-200"
         >
           <UploadCloud size={18} />
