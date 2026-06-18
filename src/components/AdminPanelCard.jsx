@@ -234,7 +234,7 @@ function AdminPanelCard({
     onClick={onSeedSupabaseMatches}
     className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700 transition hover:bg-emerald-100"
   >
-    Cargar partidos base en Supabase
+    Cargar partidos del mundial
   </button>
 )}
 
