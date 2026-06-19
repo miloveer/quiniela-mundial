@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Eye } from 'lucide-react';
 import { getTeamDisplayName, getTeamFlag } from '../utils/teamUtils';
 import { formatMatchDate } from '../utils/matchUtils';
 
@@ -6,6 +7,8 @@ function CompactMatchCard({
   match,
   onSavePrediction,
   predictionsLocked = false,
+  canViewLeaguePredictions = false,
+  onViewMatchPredictions,
 }) {
   const [homeScore, setHomeScore] = useState(
     match.userPrediction?.homeScore ?? ''
@@ -160,6 +163,17 @@ function CompactMatchCard({
           </button>
         )}
       </div>
+
+      {canViewLeaguePredictions && (
+  <button
+    type="button"
+    onClick={onViewMatchPredictions}
+    className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-[11px] font-black uppercase tracking-wide text-emerald-700 transition hover:bg-emerald-50"
+  >
+    <Eye size={14} />
+    Ver pronósticos de todos
+  </button>
+)}
 
       {predictionsLocked && !hasResult && (
         <div className="mt-3 rounded-xl bg-white px-3 py-2 text-center text-[10px] font-black uppercase tracking-wide text-slate-500">

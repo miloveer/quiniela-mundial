@@ -218,25 +218,10 @@ function AdminPanelCard({
   type="button"
   onClick={onSyncFootballDataMatches}
   disabled={isSyncingFootballData}
-  className={`rounded-2xl px-4 py-3 text-sm font-black transition ${
-    isSyncingFootballData
-      ? 'cursor-not-allowed bg-slate-200 text-slate-400'
-      : 'bg-emerald-600 text-white hover:bg-emerald-700'
-  }`}
+  className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-black text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
 >
-  {isSyncingFootballData
-    ? 'Sincronizando...'
-    : 'Sincronizar partidos desde API'}
+  {isSyncingFootballData ? 'Sincronizando...' : 'Sincronizar partidos'}
 </button>
-{onSeedSupabaseMatches && (
-  <button
-    type="button"
-    onClick={onSeedSupabaseMatches}
-    className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700 transition hover:bg-emerald-100"
-  >
-    Cargar partidos del mundial
-  </button>
-)}
 
         <button
           type="button"

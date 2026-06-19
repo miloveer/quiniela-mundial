@@ -23,6 +23,7 @@ import PrizePreviewCard from "../components/PrizePreviewCard";
 import StageProgressCard from "../components/StageProgressCard";
 import StageRankingPreviewCard from "../components/StageRankingPreviewCard";
 import GroupStandingsCard from "../components/GroupStandingsCard";
+import MatchPredictionsModal from "../components/MatchPredictionsModal";
 
 import { ensureSupabaseProfile } from "../services/supabaseProfileService";
 import { syncFootballDataMatches } from "../services/footballDataSyncService";
@@ -89,8 +90,6 @@ import {
   sortMatchesByStatusAndDate,
 } from "../utils/matchUtils";
 
-
-
 function cleanBaseMatches(matches = []) {
   return matches.map((match) => ({
     ...match,
@@ -129,8 +128,6 @@ function EmptyLeagueState({ onJoinLeague, onCreateLeague }) {
         >
           Crear liga
         </button>
-
-        
       </div>
     </section>
   );
@@ -197,6 +194,8 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   const [isPrizeEditorModalOpen, setIsPrizeEditorModalOpen] = useState(false);
   const [isPrizeSettingsModalOpen, setIsPrizeSettingsModalOpen] =
     useState(false);
+  const [selectedPredictionsMatch, setSelectedPredictionsMatch] =
+    useState(null);
 
   const [userLeagues, setUserLeagues] = useState([]);
   const [isLoadingLeagues, setIsLoadingLeagues] = useState(false);
@@ -214,7 +213,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
   const activeLeagueId = user?.activeLeagueId || user?.leagueCode || "default";
   const hasActiveLeague = Boolean(
-    activeLeagueId && activeLeagueId !== "default",
+    activeLeagueId && activeLeagueId !== "default"
   );
   const matchesStorageKey = getLeagueMatchesStorageKey(activeLeagueId);
 
@@ -222,13 +221,13 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   const safeLeagueMembers = Array.isArray(leagueMembers) ? leagueMembers : [];
 
   const activeLeague = safeUserLeagues.find(
-    (league) => league.id === activeLeagueId,
+    (league) => league.id === activeLeagueId
   );
 
   const activeLeagueMemberIds = activeLeague?.members || [];
 
   const isLeagueOwner = Boolean(
-    user?.uid && activeLeague?.ownerId && user.uid === activeLeague.ownerId,
+    user?.uid && activeLeague?.ownerId && user.uid === activeLeague.ownerId
   );
 
   const totalLeagueMembers =
@@ -239,7 +238,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   const [matchesByLeague, setMatchesByLeague] = useState(() => ({
     [activeLeagueId]: getStorageItem(
       matchesStorageKey,
-      cleanBaseMatches(initialMatches),
+      cleanBaseMatches(initialMatches)
     ),
   }));
 
@@ -258,12 +257,12 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   const filteredStageMatches = useMemo(() => {
     const filteredByStatus = filterMatchesByStatus(
       stageMatches,
-      activeMatchFilter,
+      activeMatchFilter
     );
 
     const filteredBySearch = filterMatchesBySearch(
       filteredByStatus,
-      matchSearchTerm,
+      matchSearchTerm
     );
 
     return sortMatchesTodayFirst(filteredBySearch);
@@ -346,7 +345,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   const completedPredictions = getCompletedPredictions(visibleMatches);
   const pendingMatches = getPendingMatches(visibleMatches);
   const pendingMatchesList = sortMatchesByStatusAndDate(
-    getPendingMatchesList(visibleMatches),
+    getPendingMatchesList(visibleMatches)
   );
 
   const totalPoints = calculateTotalPoints(visibleMatches);
@@ -377,7 +376,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   const memberPredictions =
     activeLeagueMemberIds.length > 0
       ? leaguePredictions.filter((prediction) =>
-          activeLeagueMemberIds.includes(prediction.userId),
+          activeLeagueMemberIds.includes(prediction.userId)
         )
       : leaguePredictions;
 
@@ -416,7 +415,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
           const profileId = profile.uid || profile.id;
 
           const userPredictions = memberPredictions.filter(
-            (prediction) => prediction.userId === profileId,
+            (prediction) => prediction.userId === profileId
           );
 
           const predictionsMap = userPredictions.reduce(
@@ -429,7 +428,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                 },
               };
             },
-            {},
+            {}
           );
 
           return {
@@ -469,7 +468,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
   function applyUserPredictionsToMatches(
     matchesToApply = [],
-    userPredictions = [],
+    userPredictions = []
   ) {
     const safeUserPredictions = Array.isArray(userPredictions)
       ? userPredictions
@@ -477,21 +476,21 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
     return matchesToApply.map((match) => {
       const userPrediction = safeUserPredictions.find(
-        (prediction) => prediction.matchId === match.id,
+        (prediction) => prediction.matchId === match.id
       );
 
       return {
         ...match,
         userPrediction: userPrediction
-  ? {
-      homeScore: Number(
-        userPrediction.prediction?.homeScore ?? userPrediction.homeScore
-      ),
-      awayScore: Number(
-        userPrediction.prediction?.awayScore ?? userPrediction.awayScore
-      ),
-    }
-  : match.userPrediction || null,
+          ? {
+              homeScore: Number(
+                userPrediction.prediction?.homeScore ?? userPrediction.homeScore
+              ),
+              awayScore: Number(
+                userPrediction.prediction?.awayScore ?? userPrediction.awayScore
+              ),
+            }
+          : match.userPrediction || null,
       };
     });
   }
@@ -553,7 +552,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
     try {
       const predictions = await getLeaguePredictions(activeLeagueId);
-      setLeaguePredictions(predictions);
+      setLeaguePredictions(Array.isArray(predictions) ? predictions : []);
     } catch (error) {
       console.error("Error cargando predicciones de la liga:", error);
       setLeaguePredictions([]);
@@ -605,7 +604,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     if (!activeLeagueId || activeLeagueId === "default") {
       const localMatches = getStorageItem(
         matchesStorageKey,
-        cleanBaseMatches(initialMatches),
+        cleanBaseMatches(initialMatches)
       );
 
       setMatchesByLeague((prevMatchesByLeague) => ({
@@ -629,7 +628,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       if (supabaseMatches.length > 0) {
         const matchesWithPredictions = applyUserPredictionsToMatches(
           supabaseMatches,
-          userPredictions,
+          userPredictions
         );
 
         setMatchesByLeague((prevMatchesByLeague) => ({
@@ -643,12 +642,12 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
       const localMatches = getStorageItem(
         matchesStorageKey,
-        cleanBaseMatches(initialMatches),
+        cleanBaseMatches(initialMatches)
       );
 
       const localMatchesWithPredictions = applyUserPredictionsToMatches(
         localMatches,
-        userPredictions,
+        userPredictions
       );
 
       setMatchesByLeague((prevMatchesByLeague) => ({
@@ -660,7 +659,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
       const localMatches = getStorageItem(
         matchesStorageKey,
-        cleanBaseMatches(initialMatches),
+        cleanBaseMatches(initialMatches)
       );
 
       setMatchesByLeague((prevMatchesByLeague) => ({
@@ -694,6 +693,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       loadLeagueMembers();
       setActiveMatchFilter("all");
       setMatchSearchTerm("");
+      setSelectedPredictionsMatch(null);
     });
   }, [activeLeagueId, user?.uid]);
 
@@ -773,7 +773,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     }
 
     const confirmSeed = window.confirm(
-      "Esto cargará los partidos base en Supabase para esta liga. No borra pronósticos ni resultados existentes. ¿Continuar?",
+      "Esto cargará los partidos base en Supabase para esta liga. No borra pronósticos ni resultados existentes. ¿Continuar?"
     );
 
     if (!confirmSeed) {
@@ -824,11 +824,11 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
     if (lastSyncAt && now - lastSyncAt < tenMinutes) {
       const remainingMinutes = Math.ceil(
-        (tenMinutes - (now - lastSyncAt)) / 60000,
+        (tenMinutes - (now - lastSyncAt)) / 60000
       );
 
       alert(
-        `Para proteger la cuota de la API, espera ${remainingMinutes} minuto(s) antes de volver a sincronizar.`,
+        `Para proteger la cuota de la API, espera ${remainingMinutes} minuto(s) antes de volver a sincronizar.`
       );
 
       return;
@@ -848,20 +848,19 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
       if (result.total === 0) {
         alert(
-          "La API respondió correctamente, pero aún no encontró partidos 2026.",
+          "La API respondió correctamente, pero aún no encontró partidos 2026."
         );
         return;
       }
 
       alert(
         result.message ||
-          `Sincronización completada:\n${result.total} partidos encontrados.\n${result.finishedMatches || 0} resultados oficiales actualizados.`,
+          `Sincronización completada:\n${result.total} partidos encontrados.\n${result.finishedMatches || 0} resultados oficiales actualizados.`
       );
     } catch (error) {
       console.error("Error sincronizando football-data:", error);
       alert(
-        error.message ||
-          "No se pudieron sincronizar los partidos desde la API.",
+        error.message || "No se pudieron sincronizar los partidos desde la API."
       );
     } finally {
       setIsSyncingFootballData(false);
@@ -878,10 +877,6 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       alert("Primero selecciona o crea una liga.");
       return;
     }
-    if (activeLeague?.predictionsLocked) {
-  alert('La quiniela ya fue cerrada. Ya no se pueden editar pronósticos.');
-  return;
-}
 
     try {
       await saveLeaguePrizes({
@@ -935,75 +930,79 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     setActiveSection("home");
   }
 
+ function handleOpenMatchPredictions(match) {
+  setSelectedPredictionsMatch(match);
+}
+
   async function handleSavePrediction(matchId, prediction) {
-  if (!user?.uid) {
-    alert('Debes iniciar sesión para guardar pronósticos.');
-    return;
-  }
-
-  if (!hasActiveLeague) {
-    alert('Primero debes unirte a una liga.');
-    return;
-  }
-
-  if (activeLeague?.predictionsLocked) {
-    alert('La quiniela ya fue cerrada. Ya no se pueden editar pronósticos.');
-    return;
-  }
-
-  setMatchesByLeague((prevMatchesByLeague) => {
-    const currentMatches =
-      prevMatchesByLeague[activeLeagueId] ??
-      getStorageItem(matchesStorageKey, cleanBaseMatches(initialMatches));
-
-    const updatedMatches = currentMatches.map((match) => {
-      if (match.id !== matchId) {
-        return match;
-      }
-
-      return {
-        ...match,
-        userPrediction: prediction,
-      };
-    });
-
-    setStorageItem(matchesStorageKey, updatedMatches);
-
-    return {
-      ...prevMatchesByLeague,
-      [activeLeagueId]: updatedMatches,
-    };
-  });
-
-  try {
-    await savePrediction({
-      leagueId: activeLeagueId,
-      matchId,
-      userId: user.uid,
-      homeScore: Number(prediction.homeScore),
-      awayScore: Number(prediction.awayScore),
-    });
-
-    await loadLeaguePredictions();
-    await loadUserProfiles();
-  } catch (error) {
-    console.error('Error guardando predicción en Supabase:', error);
-
-    if (
-      error?.code === '42501' ||
-      error?.message?.includes('row-level security')
-    ) {
-      alert('La quiniela ya fue cerrada. Ya no se pueden editar pronósticos.');
-      await loadLeagueMatches();
-      await loadLeaguePredictions();
+    if (!user?.uid) {
+      alert("Debes iniciar sesión para guardar pronósticos.");
       return;
     }
 
-    alert(
-      'Tu pronóstico no pudo sincronizarse correctamente. Intenta nuevamente.'
-    );
+    if (!hasActiveLeague) {
+      alert("Primero debes unirte a una liga.");
+      return;
+    }
+
+    if (activeLeague?.predictionsLocked) {
+      alert("La quiniela ya fue cerrada. Ya no se pueden editar pronósticos.");
+      return;
+    }
+
+    setMatchesByLeague((prevMatchesByLeague) => {
+      const currentMatches =
+        prevMatchesByLeague[activeLeagueId] ??
+        getStorageItem(matchesStorageKey, cleanBaseMatches(initialMatches));
+
+      const updatedMatches = currentMatches.map((match) => {
+        if (match.id !== matchId) {
+          return match;
+        }
+
+        return {
+          ...match,
+          userPrediction: prediction,
+        };
+      });
+
+      setStorageItem(matchesStorageKey, updatedMatches);
+
+      return {
+        ...prevMatchesByLeague,
+        [activeLeagueId]: updatedMatches,
+      };
+    });
+
+    try {
+      await savePrediction({
+        leagueId: activeLeagueId,
+        matchId,
+        userId: user.uid,
+        homeScore: Number(prediction.homeScore),
+        awayScore: Number(prediction.awayScore),
+      });
+
+      await loadLeaguePredictions();
+      await loadUserProfiles();
+    } catch (error) {
+      console.error("Error guardando predicción en Supabase:", error);
+
+      if (
+        error?.code === "42501" ||
+        error?.message?.includes("row-level security")
+      ) {
+        alert("La quiniela ya fue cerrada. Ya no se pueden editar pronósticos.");
+        await loadLeagueMatches();
+        await loadLeaguePredictions();
+        return;
+      }
+
+      alert(
+        "Tu pronóstico no pudo sincronizarse correctamente. Intenta nuevamente."
+      );
+    }
   }
-}
 
   async function handleSaveResult(matchId, result) {
     if (!isLeagueOwner) {
@@ -1051,7 +1050,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     } catch (error) {
       console.error("Error guardando resultado en Supabase:", error);
       alert(
-        "El resultado no pudo sincronizarse correctamente. Intenta nuevamente.",
+        "El resultado no pudo sincronizarse correctamente. Intenta nuevamente."
       );
     }
   }
@@ -1396,7 +1395,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                             ? Math.round(
                                 (stageCompletedPredictions /
                                   stageTotalMatches) *
-                                  100,
+                                  100
                               )
                             : 0}
                           %
@@ -1417,7 +1416,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                                 ? Math.round(
                                     (stageCompletedPredictions /
                                       stageTotalMatches) *
-                                      100,
+                                      100
                                   )
                                 : 0
                             }%`,
@@ -1552,7 +1551,15 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                           key={match.id}
                           match={match}
                           onSavePrediction={handleSavePrediction}
-                          predictionsLocked={Boolean(activeLeague?.predictionsLocked)}
+                          predictionsLocked={Boolean(
+                            activeLeague?.predictionsLocked
+                          )}
+                          canViewLeaguePredictions={Boolean(
+                            activeLeague?.predictionsLocked || match.result
+                          )}
+                          onViewMatchPredictions={() =>
+                            handleOpenMatchPredictions(match)
+                          }
                         />
                       ))}
                     </div>
@@ -1565,7 +1572,15 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                           key={match.id}
                           match={match}
                           onSavePrediction={handleSavePrediction}
-                          predictionsLocked={Boolean(activeLeague?.predictionsLocked)}
+                          predictionsLocked={Boolean(
+                            activeLeague?.predictionsLocked
+                          )}
+                          canViewLeaguePredictions={Boolean(
+                            activeLeague?.predictionsLocked || match.result
+                          )}
+                          onViewMatchPredictions={() =>
+                            handleOpenMatchPredictions(match)
+                          }
                         />
                       ))}
                   </section>
@@ -1624,7 +1639,16 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                 onCreateLeague={() => setIsCreateLeagueModalOpen(true)}
               />
             ) : (
-              <PredictionHistoryCard matches={visibleMatches} />
+              <PredictionHistoryCard
+                matches={visibleMatches}
+                userName={currentUserName}
+                leagueName={
+                  activeLeague?.name ||
+                  user?.leagueName ||
+                  user?.leagueCode ||
+                  "Quinielazo"
+                }
+              />
             )}
           </>
         )}
@@ -1680,39 +1704,42 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
           </>
         )}
 
-        {activeSection === 'admin' && isLeagueOwner && (
-  <div className="space-y-4">
-    <section className="rounded-[1.5rem] border border-white/70 bg-white/80 p-4 shadow-xl shadow-slate-200/70 backdrop-blur sm:rounded-[2rem] sm:p-5">
-      <p className="text-sm font-bold text-emerald-700">
-        Administración
-      </p>
+        {activeSection === "admin" && isLeagueOwner && (
+          <div className="space-y-4">
+            <section className="rounded-[1.5rem] border border-white/70 bg-white/80 p-4 shadow-xl shadow-slate-200/70 backdrop-blur sm:rounded-[2rem] sm:p-5">
+              <p className="text-sm font-bold text-emerald-700">
+                Administración
+              </p>
 
-      <h2 className="mt-1 text-3xl font-black tracking-tight text-slate-950">
-        Panel de {user?.leagueName || user?.leagueCode || 'liga'}
-      </h2>
+              <h2 className="mt-1 text-3xl font-black tracking-tight text-slate-950">
+                Panel de {user?.leagueName || user?.leagueCode || "liga"}
+              </h2>
 
-      <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
-        Desde aquí puedes cargar partidos, revisar participantes y
-        actualizar resultados oficiales de la quiniela.
-      </p>
-    </section>
+              <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
+                Desde aquí puedes cargar partidos, revisar participantes y
+                actualizar resultados oficiales de la quiniela.
+              </p>
+            </section>
 
-    <AdminPanelCard
-      users={leagueAdminUsers}
-      matches={visibleMatches}
-      members={safeLeagueMembers}
-      entryFee={activeLeague?.entryFee || 0}
-      prizeMode={activeLeague?.prizeMode || 'fixed'}
-      isSyncingFootballData={isSyncingFootballData}
-      onOpenResultModal={() => setIsResultModalOpen(true)}
-      onOpenCreateLeagueModal={() => setIsCreateLeagueModalOpen(true)}
-      onOpenPrizeEditorModal={() => setIsPrizeEditorModalOpen(true)}
-      onOpenPrizeSettingsModal={() => setIsPrizeSettingsModalOpen(true)}
-      onSyncFootballDataMatches={handleSyncFootballDataMatches}
-      onSeedSupabaseMatches={handleSeedSupabaseMatches}
-    />
-  </div>
-)}
+            <AdminPanelCard
+              users={leagueAdminUsers}
+              matches={visibleMatches}
+              members={safeLeagueMembers}
+              entryFee={activeLeague?.entryFee || 0}
+              prizeMode={activeLeague?.prizeMode || "fixed"}
+              isSyncingFootballData={isSyncingFootballData}
+              onOpenResultModal={() => setIsResultModalOpen(true)}
+              onOpenCreateLeagueModal={() => setIsCreateLeagueModalOpen(true)}
+              onOpenPrizeEditorModal={() => setIsPrizeEditorModalOpen(true)}
+              onOpenPrizeSettingsModal={() =>
+                setIsPrizeSettingsModalOpen(true)
+              }
+              onSyncFootballDataMatches={handleSyncFootballDataMatches}
+              onSeedSupabaseMatches={handleSeedSupabaseMatches}
+            />
+          </div>
+        )}
+
         {activeSection === "admin" && !isLeagueOwner && (
           <section className="rounded-[2rem] border border-slate-200 bg-white p-6 text-center shadow-sm">
             <p className="text-sm font-bold text-emerald-700">
@@ -1735,8 +1762,6 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
             >
               Volver al inicio
             </button>
-
-            
           </section>
         )}
 
@@ -1764,10 +1789,12 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                 marcador exacto.
               </p>
 
-              <p>Los pronósticos se bloquean cuando inicia el partido.</p>
+              <p>
+                Los pronósticos se bloquean cuando inicia el partido o cuando la
+                quiniela es cerrada por el administrador.
+              </p>
             </div>
           </section>
-          
         )}
       </main>
 
@@ -1808,6 +1835,15 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
         prizeMode={activeLeague?.prizeMode || "fixed"}
         onSaveSettings={handleSavePrizeSettings}
       />
+
+      <MatchPredictionsModal
+  isOpen={Boolean(selectedPredictionsMatch)}
+  onClose={() => setSelectedPredictionsMatch(null)}
+  match={selectedPredictionsMatch}
+  predictions={leaguePredictions}
+  userProfiles={userProfiles}
+  leagueMembers={safeLeagueMembers}
+/>
     </div>
   );
 }
