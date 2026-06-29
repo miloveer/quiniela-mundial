@@ -7,6 +7,7 @@ import {
   Settings2,
   Trophy,
   UploadCloud,
+  Keyboard,
   UserCheck,
   UsersRound,
   WalletCards,
@@ -68,6 +69,7 @@ function AdminPanelCard({
   onSaveWhatsappPrediction,
   onDeletePendingPrediction,
   onClaimPendingPredictions,
+  onOpenManualPredictionModal,
 }) {
   const [whatsappMatchId, setWhatsappMatchId] = useState('');
   const [whatsappReferenceName, setWhatsappReferenceName] = useState('');
@@ -166,7 +168,16 @@ function AdminPanelCard({
             Miembros registrados
           </p>
         </article>
-
+{/* --- NUEVO BOTÓN PARA PRONÓSTICOS MANUALES --- */}
+        <button
+          type="button"
+          onClick={onOpenManualPredictionModal}
+          className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-indigo-300 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-indigo-200"
+        >
+          <Keyboard size={18} />
+          Capturar pronósticos por usuario
+        </button>
+        {/* --------------------------------------------- */}
         <article className="rounded-2xl bg-white/10 p-3 sm:p-4">
           <div className="mb-2 flex items-center gap-2 text-emerald-300">
             <CheckCircle2 size={18} />
