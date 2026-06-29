@@ -55,6 +55,13 @@ import {
 } from "../services/supabasePrizeService";
 
 import {
+  saveSupabasePendingPrediction,
+  getSupabasePendingPredictions,
+  deleteSupabasePendingPrediction,
+  claimSupabasePendingPredictionsForUser,
+} from "../services/supabasePendingPredictionService";
+
+import {
   matches as initialMatches,
   prizes as initialPrizes,
   stages,
@@ -277,6 +284,11 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   const [isLoadingPrizes, setIsLoadingPrizes] = useState(false);
 
   const [leagueMembers, setLeagueMembers] = useState([]);
+
+  const [pendingWhatsappPredictions, setPendingWhatsappPredictions] =
+    useState([]);
+  const [isLoadingPendingPredictions, setIsLoadingPendingPredictions] =
+    useState(false);
 
   const [isSyncingFootballData, setIsSyncingFootballData] = useState(false);
 
@@ -633,6 +645,27 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     }
   }
 
+  async function loadPendingWhatsappPredictions() {
+    if (!isLeagueOwner || !activeLeagueId || activeLeagueId === "default") {
+      setPendingWhatsappPredictions([]);
+      return;
+    }
+
+    setIsLoadingPendingPredictions(true);
+
+    try {
+      const pendingPredictions = await getSupabasePendingPredictions(
+        activeLeagueId
+      );
+      setPendingWhatsappPredictions(pendingPredictions);
+    } catch (error) {
+      console.error("Error cargando pronósticos pendientes:", error);
+      setPendingWhatsappPredictions([]);
+    } finally {
+      setIsLoadingPendingPredictions(false);
+    }
+  }
+
   async function loadLeaguePredictions() {
     if (!activeLeagueId || activeLeagueId === "default") {
       setLeaguePredictions([]);
@@ -780,6 +813,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       loadLeaguePredictions();
       loadLeaguePrizes();
       loadLeagueMembers();
+      loadPendingWhatsappPredictions();
       setActiveMatchFilter("all");
       setMatchSearchTerm("");
       setSelectedPredictionsMatch(null);
@@ -888,6 +922,104 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     } catch (error) {
       console.error("Error cargando partidos base en Supabase:", error);
       alert(error.message || "No se pudieron cargar los partidos base.");
+    }
+  }
+
+  async function handleSaveWhatsappPrediction({
+    matchId,
+    referenceName,
+    homeScore,
+    awayScore,
+  }) {
+    if (!isLeagueOwner) {
+      alert("Solo el administrador puede cargar pronósticos por WhatsApp.");
+      return;
+    }
+
+    if (!activeLeagueId || activeLeagueId === "default") {
+      alert("Primero selecciona o crea una liga.");
+      return;
+    }
+
+    if (!matchId || !referenceName?.trim()) {
+      alert("Selecciona un partido y escribe el nombre de la persona.");
+      return;
+    }
+
+    try {
+      await saveSupabasePendingPrediction({
+        leagueId: activeLeagueId,
+        matchId,
+        referenceName: referenceName.trim(),
+        homeScore,
+        awayScore,
+      });
+
+      await loadPendingWhatsappPredictions();
+
+      alert(`Pronóstico guardado para "${referenceName.trim()}".`);
+    } catch (error) {
+      console.error("Error guardando pronóstico pendiente:", error);
+      alert("No se pudo guardar el pronóstico pendiente. Intenta de nuevo.");
+    }
+  }
+
+  async function handleDeletePendingPrediction(pendingPredictionId) {
+    if (!isLeagueOwner) {
+      alert("Solo el administrador puede borrar pronósticos pendientes.");
+      return;
+    }
+
+    const confirmDelete = window.confirm(
+      "¿Borrar este pronóstico pendiente? Esta acción no se puede deshacer."
+    );
+
+    if (!confirmDelete) {
+      return;
+    }
+
+    try {
+      await deleteSupabasePendingPrediction(pendingPredictionId);
+      await loadPendingWhatsappPredictions();
+    } catch (error) {
+      console.error("Error borrando pronóstico pendiente:", error);
+      alert("No se pudo borrar el pronóstico pendiente.");
+    }
+  }
+
+  async function handleClaimPendingPredictions({ referenceName, userId }) {
+    if (!isLeagueOwner) {
+      alert("Solo el administrador puede asignar pronósticos pendientes.");
+      return;
+    }
+
+    if (!activeLeagueId || activeLeagueId === "default") {
+      alert("Primero selecciona o crea una liga.");
+      return;
+    }
+
+    if (!referenceName || !userId) {
+      alert("Selecciona a qué participante se le asignarán los pronósticos.");
+      return;
+    }
+
+    try {
+      const result = await claimSupabasePendingPredictionsForUser({
+        leagueId: activeLeagueId,
+        referenceName,
+        userId,
+      });
+
+      await loadPendingWhatsappPredictions();
+      await loadLeaguePredictions();
+      await loadUserProfiles();
+
+      alert(
+        `${result.claimedCount} pronóstico(s) de "${referenceName}" asignado(s) correctamente.`
+      );
+    } catch (error) {
+      console.error("Error asignando pronósticos pendientes:", error);
+      alert("No se pudieron asignar los pronósticos. Intenta de nuevo.");
     }
   }
 
@@ -1826,11 +1958,13 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
             <AdminPanelCard
               users={leagueAdminUsers}
-              matches={visibleMatches}
+              matches={allLeagueMatches}
               members={safeLeagueMembers}
               entryFee={activeLeague?.entryFee || 0}
               prizeMode={activeLeague?.prizeMode || "fixed"}
               isSyncingFootballData={isSyncingFootballData}
+              pendingWhatsappPredictions={pendingWhatsappPredictions}
+              isLoadingPendingPredictions={isLoadingPendingPredictions}
               onOpenResultModal={() => setIsResultModalOpen(true)}
               onOpenCreateLeagueModal={() => setIsCreateLeagueModalOpen(true)}
               onOpenPrizeEditorModal={() => setIsPrizeEditorModalOpen(true)}
@@ -1839,6 +1973,9 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
               }
               onSyncFootballDataMatches={handleSyncFootballDataMatches}
               onSeedSupabaseMatches={handleSeedSupabaseMatches}
+              onSaveWhatsappPrediction={handleSaveWhatsappPrediction}
+              onDeletePendingPrediction={handleDeletePendingPrediction}
+              onClaimPendingPredictions={handleClaimPendingPredictions}
             />
           </div>
         )}
