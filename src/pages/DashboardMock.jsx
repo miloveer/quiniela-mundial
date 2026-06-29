@@ -168,6 +168,40 @@ function filterMatchesForParticipant(matchesToFilter = [], allStages = []) {
   });
 }
 
+function getUserIdsWithGroupStagePredictions(predictions = [], matches = []) {
+  const groupStageMatchIds = new Set(
+    matches
+      .filter((match) => match.stageId === "group-stage")
+      .map((match) => match.id)
+  );
+
+  const userIdsWithGroupPredictions = new Set();
+
+  predictions.forEach((predictionDoc) => {
+    if (groupStageMatchIds.has(predictionDoc.matchId)) {
+      userIdsWithGroupPredictions.add(predictionDoc.userId);
+    }
+  });
+
+  return userIdsWithGroupPredictions;
+}
+
+function markLateJoinersInRanking(ranking = [], userIdsWithGroupPredictions) {
+  return ranking.map((rankingUser) => {
+    const userId = rankingUser.uid || rankingUser.id;
+    const joinedLate = !userIdsWithGroupPredictions.has(userId);
+
+    if (!joinedLate || rankingUser.badge === "Tú") {
+      return rankingUser;
+    }
+
+    return {
+      ...rankingUser,
+      badge: "Se unió en 16vos",
+    };
+  });
+}
+
 function isSameLocalDay(dateA, dateB) {
   const firstDate = new Date(dateA);
   const secondDate = new Date(dateB);
@@ -281,6 +315,16 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     matchesByLeague[activeLeagueId] ??
     getStorageItem(matchesStorageKey, cleanBaseMatches(initialMatches));
 
+  // allLeagueMatches: TODOS los partidos reales de la liga, sin filtrar.
+  // Se usa para calcular rankings que comparan a varios participantes entre
+  // sí (general y por etapa), porque ahí siempre deben contarse los
+  // resultados reales de cada etapa, sin importar qué partidos vea el
+  // usuario que tiene la sesión abierta en este momento.
+  const allLeagueMatches = hasActiveLeague ? matches : [];
+
+  // visibleMatches: lo que el usuario ACTUAL ve y puede llenar (sus
+  // pendientes, su historial, sus tarjetas de partido). Si el usuario se
+  // unió después de la fase de grupos, esos partidos quedan ocultos aquí.
   const visibleMatches = hasActiveLeague
     ? filterMatchesForParticipant(matches, stages)
     : [];
@@ -419,16 +463,24 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
   const firestoreRanking = buildRankingFromPredictions({
     predictions: memberPredictions,
-    matches: visibleMatches,
+    matches: allLeagueMatches,
     currentUser: user,
     userProfiles,
   });
 
   const fallbackRanking = buildRanking(rankingUsers, visibleMatches);
 
+  const userIdsWithGroupStagePredictions = getUserIdsWithGroupStagePredictions(
+    memberPredictions,
+    allLeagueMatches
+  );
+
   const ranking =
     hasActiveLeague && firestoreRanking.length > 0
-      ? firestoreRanking
+      ? markLateJoinersInRanking(
+          firestoreRanking,
+          userIdsWithGroupStagePredictions
+        )
       : hasActiveLeague
         ? fallbackRanking
         : [];
@@ -486,12 +538,12 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     hasActiveLeague && firestoreRanking.length > 0
       ? buildRankingFromPredictions({
           predictions: memberPredictions,
-          matches: getStageMatches(visibleMatches, activeStageId),
+          matches: getStageMatches(allLeagueMatches, activeStageId),
           currentUser: user,
           userProfiles,
         })
       : hasActiveLeague
-        ? buildStageRanking(rankingUsers, visibleMatches, activeStageId)
+        ? buildStageRanking(rankingUsers, allLeagueMatches, activeStageId)
         : [];
 
   function handleChangeSection(sectionId) {
