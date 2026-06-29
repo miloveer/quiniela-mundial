@@ -90,6 +90,8 @@ import {
   sortMatchesByStatusAndDate,
 } from "../utils/matchUtils";
 
+const CURRENT_TOURNAMENT_STAGE = "round-32";
+
 function cleanBaseMatches(matches = []) {
   return matches.map((match) => ({
     ...match,
@@ -131,6 +133,39 @@ function EmptyLeagueState({ onJoinLeague, onCreateLeague }) {
       </div>
     </section>
   );
+}
+
+function isStageBeforeCurrent(stageId, currentStageId, allStages) {
+  const stageIndex = allStages.findIndex((stage) => stage.id === stageId);
+  const currentIndex = allStages.findIndex(
+    (stage) => stage.id === currentStageId
+  );
+
+  if (stageIndex === -1 || currentIndex === -1) {
+    return false;
+  }
+
+  return stageIndex < currentIndex;
+}
+
+function filterMatchesForParticipant(matchesToFilter = [], allStages = []) {
+  return matchesToFilter.filter((match) => {
+    const isPastStage = isStageBeforeCurrent(
+      match.stageId,
+      CURRENT_TOURNAMENT_STAGE,
+      allStages
+    );
+
+    // Las etapas que ya pasaron solo se muestran si el participante
+    // ya tiene un pronóstico guardado ahí (para que pueda ver su historial).
+    // Si nunca llenó esa etapa (ej. se unió después), no debe poder verla
+    // ni llenarla, porque ya hay resultados oficiales y sería trampa.
+    if (isPastStage) {
+      return Boolean(match.userPrediction);
+    }
+
+    return true;
+  });
 }
 
 function isSameLocalDay(dateA, dateB) {
@@ -246,7 +281,9 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     matchesByLeague[activeLeagueId] ??
     getStorageItem(matchesStorageKey, cleanBaseMatches(initialMatches));
 
-  const visibleMatches = hasActiveLeague ? matches : [];
+  const visibleMatches = hasActiveLeague
+    ? filterMatchesForParticipant(matches, stages)
+    : [];
 
   const activeStage = stages.find((stage) => stage.id === activeStageId);
 
@@ -1440,19 +1477,26 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                         </h3>
                       </div>
 
-                      <select
-                        value={safeActiveStandingsGroup}
-                        onChange={(event) =>
-                          setActiveStandingsGroup(event.target.value)
-                        }
-                        className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-black text-slate-700 outline-none focus:border-emerald-400"
-                      >
-                        {standingsGroupLabels.map((groupLabel) => (
-                          <option key={groupLabel} value={groupLabel}>
-                            {groupLabel}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="flex max-w-full gap-2 overflow-x-auto pb-1">
+  {standingsGroupLabels.map((groupLabel) => {
+    const isActive = safeActiveStandingsGroup === groupLabel;
+
+    return (
+      <button
+        key={groupLabel}
+        type="button"
+        onClick={() => setActiveStandingsGroup(groupLabel)}
+        className={`shrink-0 rounded-2xl px-4 py-2 text-xs font-black transition ${
+          isActive
+            ? "bg-emerald-600 text-white shadow-lg shadow-emerald-100"
+            : "bg-slate-100 text-slate-600 hover:bg-emerald-50 hover:text-emerald-700"
+        }`}
+      >
+        {groupLabel}
+      </button>
+    );
+  })}
+</div>
                     </div>
 
                     <GroupStandingsCard
@@ -1524,20 +1568,27 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                         </p>
                       </div>
 
-                      <div className="flex flex-col gap-2 sm:items-end">
-                        <select
-                          value={safeActivePredictionsGroup}
-                          onChange={(event) =>
-                            setActivePredictionsGroup(event.target.value)
-                          }
-                          className="rounded-2xl border border-white/10 bg-white px-4 py-2.5 text-sm font-black text-slate-950 outline-none"
-                        >
-                          {standingsGroupLabels.map((groupLabel) => (
-                            <option key={groupLabel} value={groupLabel}>
-                              {groupLabel}
-                            </option>
-                          ))}
-                        </select>
+                      <div className="flex w-full flex-col gap-2 sm:items-end">
+                        <div className="flex max-w-full gap-2 overflow-x-auto pb-1">
+  {standingsGroupLabels.map((groupLabel) => {
+    const isActive = safeActivePredictionsGroup === groupLabel;
+
+    return (
+      <button
+        key={groupLabel}
+        type="button"
+        onClick={() => setActivePredictionsGroup(groupLabel)}
+        className={`shrink-0 rounded-2xl px-4 py-2 text-xs font-black transition ${
+          isActive
+            ? "bg-white text-slate-950 shadow-lg shadow-black/10"
+            : "bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white"
+        }`}
+      >
+        {groupLabel}
+      </button>
+    );
+  })}
+</div>
 
                         <p className="rounded-full bg-white/10 px-3 py-1 text-xs font-black">
                           {selectedGroupMatches.length} partidos
