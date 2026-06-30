@@ -24,6 +24,7 @@ import StageProgressCard from "../components/StageProgressCard";
 import StageRankingPreviewCard from "../components/StageRankingPreviewCard";
 import GroupStandingsCard from "../components/GroupStandingsCard";
 import MatchPredictionsModal from "../components/MatchPredictionsModal";
+import AdminManualPredictionModal from '../components/AdminManualPredictionModal';
 
 import { ensureSupabaseProfile } from "../services/supabaseProfileService";
 import { syncFootballDataMatches } from "../services/footballDataSyncService";
@@ -163,10 +164,6 @@ function filterMatchesForParticipant(matchesToFilter = [], allStages = []) {
       allStages
     );
 
-    // Las etapas que ya pasaron solo se muestran si el participante
-    // ya tiene un pronóstico guardado ahí (para que pueda ver su historial).
-    // Si nunca llenó esa etapa (ej. se unió después), no debe poder verla
-    // ni llenarla, porque ya hay resultados oficiales y sería trampa.
     if (isPastStage) {
       return Boolean(match.userPrediction);
     }
@@ -268,10 +265,11 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [isCreateLeagueModalOpen, setIsCreateLeagueModalOpen] = useState(false);
   const [isPrizeEditorModalOpen, setIsPrizeEditorModalOpen] = useState(false);
-  const [isPrizeSettingsModalOpen, setIsPrizeSettingsModalOpen] =
-    useState(false);
-  const [selectedPredictionsMatch, setSelectedPredictionsMatch] =
-    useState(null);
+  const [isPrizeSettingsModalOpen, setIsPrizeSettingsModalOpen] = useState(false);
+  const [selectedPredictionsMatch, setSelectedPredictionsMatch] = useState(null);
+  
+  // NUEVO ESTADO PARA EL MODAL MANUAL
+  const [isManualPredictionModalOpen, setIsManualPredictionModalOpen] = useState(false);
 
   const [userLeagues, setUserLeagues] = useState([]);
   const [isLoadingLeagues, setIsLoadingLeagues] = useState(false);
@@ -285,10 +283,8 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
 
   const [leagueMembers, setLeagueMembers] = useState([]);
 
-  const [pendingWhatsappPredictions, setPendingWhatsappPredictions] =
-    useState([]);
-  const [isLoadingPendingPredictions, setIsLoadingPendingPredictions] =
-    useState(false);
+  const [pendingWhatsappPredictions, setPendingWhatsappPredictions] = useState([]);
+  const [isLoadingPendingPredictions, setIsLoadingPendingPredictions] = useState(false);
 
   const [isSyncingFootballData, setIsSyncingFootballData] = useState(false);
 
@@ -327,16 +323,8 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     matchesByLeague[activeLeagueId] ??
     getStorageItem(matchesStorageKey, cleanBaseMatches(initialMatches));
 
-  // allLeagueMatches: TODOS los partidos reales de la liga, sin filtrar.
-  // Se usa para calcular rankings que comparan a varios participantes entre
-  // sí (general y por etapa), porque ahí siempre deben contarse los
-  // resultados reales de cada etapa, sin importar qué partidos vea el
-  // usuario que tiene la sesión abierta en este momento.
   const allLeagueMatches = hasActiveLeague ? matches : [];
 
-  // visibleMatches: lo que el usuario ACTUAL ve y puede llenar (sus
-  // pendientes, su historial, sus tarjetas de partido). Si el usuario se
-  // unió después de la fase de grupos, esos partidos quedan ocultos aquí.
   const visibleMatches = hasActiveLeague
     ? filterMatchesForParticipant(matches, stages)
     : [];
@@ -1224,6 +1212,34 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       );
     }
   }
+  
+  // ==========================================
+  // NUEVA FUNCIÓN PARA GUARDAR PRONÓSTICOS MANUALES
+  // ==========================================
+  async function handleSaveManualPrediction({ userId, matchId, homeScore, awayScore }) {
+    if (!isLeagueOwner) {
+      alert("Solo el administrador puede capturar pronósticos manuales.");
+      return;
+    }
+
+    try {
+      await savePrediction({
+        leagueId: activeLeagueId,
+        matchId,
+        userId,
+        homeScore: Number(homeScore),
+        awayScore: Number(awayScore),
+      });
+
+      // Recargamos predicciones y perfiles para que se reflejen en la vista
+      await loadLeaguePredictions();
+      await loadUserProfiles();
+    } catch (error) {
+      console.error("Error guardando predicción manual en Supabase:", error);
+      throw error; // Lanzamos el error para que el modal lo cachee
+    }
+  }
+  // ==========================================
 
   async function handleSaveResult(matchId, result) {
     if (!isLeagueOwner) {
@@ -1976,6 +1992,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
               onSaveWhatsappPrediction={handleSaveWhatsappPrediction}
               onDeletePendingPrediction={handleDeletePendingPrediction}
               onClaimPendingPredictions={handleClaimPendingPredictions}
+              onOpenManualPredictionModal={() => setIsManualPredictionModalOpen(true)}
             />
           </div>
         )}
@@ -2077,13 +2094,21 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       />
 
       <MatchPredictionsModal
-  isOpen={Boolean(selectedPredictionsMatch)}
-  onClose={() => setSelectedPredictionsMatch(null)}
-  match={selectedPredictionsMatch}
-  predictions={leaguePredictions}
-  userProfiles={userProfiles}
-  leagueMembers={safeLeagueMembers}
-/>
+        isOpen={Boolean(selectedPredictionsMatch)}
+        onClose={() => setSelectedPredictionsMatch(null)}
+        match={selectedPredictionsMatch}
+        predictions={leaguePredictions}
+        userProfiles={userProfiles}
+        leagueMembers={safeLeagueMembers}
+      />
+
+      <AdminManualPredictionModal
+        isOpen={isManualPredictionModalOpen}
+        onClose={() => setIsManualPredictionModalOpen(false)}
+        users={userProfiles}
+        matches={allLeagueMatches}
+        onSavePrediction={handleSaveManualPrediction}
+      />
     </div>
   );
 }
