@@ -1,11 +1,9 @@
 import {
   BarChart3,
   ClipboardList,
-  Gift,
   History,
   Home,
   ShieldCheck,
-  Swords,
 } from 'lucide-react';
 
 const navigationItems = [
@@ -32,18 +30,6 @@ const navigationItems = [
     label: 'Historial',
     shortLabel: 'Historial',
     icon: History,
-  },
-  {
-    id: 'compare',
-    label: 'Comparar',
-    shortLabel: 'VS',
-    icon: Swords,
-  },
-  {
-    id: 'prizes',
-    label: 'Premios',
-    shortLabel: 'Premios',
-    icon: Gift,
   },
   {
     id: 'admin',

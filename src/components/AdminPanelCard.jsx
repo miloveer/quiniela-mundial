@@ -1,27 +1,16 @@
 import {
   CheckCircle2,
   ClipboardList,
-  Coins,
   MessageCircle,
   PlusCircle,
-  Settings2,
   Trophy,
   UploadCloud,
   Keyboard,
   UserCheck,
   UsersRound,
-  WalletCards,
   XCircle,
 } from 'lucide-react';
 import { useState } from 'react';
-
-function formatMoney(amount) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    maximumFractionDigits: 0,
-  }).format(amount || 0);
-}
 
 function getCompletedPredictionsByUser(user, matches) {
   return matches.filter((match) => user?.predictions?.[match.id]).length;
@@ -55,15 +44,11 @@ function AdminPanelCard({
   users,
   matches,
   members,
-  entryFee,
-  prizeMode,
   isSyncingFootballData = false,
   pendingWhatsappPredictions = [],
   isLoadingPendingPredictions = false,
   onOpenResultModal,
   onOpenCreateLeagueModal,
-  onOpenPrizeEditorModal,
-  onOpenPrizeSettingsModal,
   onSyncFootballDataMatches,
   onSeedSupabaseMatches,
   onSaveWhatsappPrediction,
@@ -79,7 +64,6 @@ function AdminPanelCard({
 
   const totalMatches = matches.length;
   const totalMembers = members.length;
-  const estimatedPool = totalMembers * entryFee;
 
   const usersWithoutCompletedPredictions = users.filter((user) => {
     return getCompletedPredictionsByUser(user, matches) < totalMatches;
@@ -168,7 +152,7 @@ function AdminPanelCard({
             Miembros registrados
           </p>
         </article>
-{/* --- NUEVO BOTÓN PARA PRONÓSTICOS MANUALES --- */}
+        {/* --- NUEVO BOTÓN PARA PRONÓSTICOS MANUALES --- */}
         <button
           type="button"
           onClick={onOpenManualPredictionModal}
@@ -231,65 +215,6 @@ function AdminPanelCard({
         </article>
       </div>
 
-      <div className="mt-5 rounded-[1.5rem] bg-white/10 p-4">
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
-            <p className="text-sm font-bold text-emerald-300">Bolsa estimada</p>
-
-            <h3 className="mt-1 text-xl font-black">Premio de la liga</h3>
-
-            <p className="mt-1 text-sm leading-6 text-slate-400">
-              Entrada por participante: {formatMoney(entryFee)}
-            </p>
-          </div>
-
-          <div className="rounded-2xl bg-white/10 p-3 text-emerald-300">
-            <WalletCards size={22} />
-          </div>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl bg-slate-950/60 p-4">
-            <p className="text-xs font-black uppercase tracking-wider text-slate-400">
-              Participantes
-            </p>
-
-            <p className="mt-2 text-2xl font-black">{totalMembers}</p>
-          </div>
-
-          <div className="rounded-2xl bg-slate-950/60 p-4">
-            <p className="text-xs font-black uppercase tracking-wider text-slate-400">
-              Entrada
-            </p>
-
-            <p className="mt-2 text-2xl font-black">{formatMoney(entryFee)}</p>
-          </div>
-
-          <div className="rounded-2xl bg-emerald-400 p-4 text-slate-950">
-            <p className="text-xs font-black uppercase tracking-wider">Bolsa</p>
-
-            <p className="mt-2 text-2xl font-black">
-              {formatMoney(estimatedPool)}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-3 rounded-2xl bg-white/10 p-3">
-          <p className="text-sm font-black text-white">
-            Modalidad:{' '}
-            {prizeMode === 'winner_takes_all'
-              ? 'ganador se lleva todo'
-              : 'premios configurados'}
-          </p>
-
-          {prizeMode === 'winner_takes_all' && (
-            <p className="mt-1 text-xs font-bold text-slate-400">
-              La bolsa se calcula con participantes registrados × entrada.
-            </p>
-          )}
-        </div>
-      </div>
-
       <div className="mt-5 grid gap-2 sm:grid-cols-2 sm:gap-3">
         <button
           type="button"
@@ -301,13 +226,13 @@ function AdminPanelCard({
         </button>
 
         <button
-  type="button"
-  onClick={onSyncFootballDataMatches}
-  disabled={isSyncingFootballData}
-  className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-black text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
->
-  {isSyncingFootballData ? 'Sincronizando...' : 'Sincronizar partidos'}
-</button>
+          type="button"
+          onClick={onSyncFootballDataMatches}
+          disabled={isSyncingFootballData}
+          className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-black text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isSyncingFootballData ? 'Sincronizando...' : 'Sincronizar partidos'}
+        </button>
 
         <button
           type="button"
@@ -316,26 +241,6 @@ function AdminPanelCard({
         >
           <UploadCloud size={18} />
           Cargar calendario base
-        </button>
-
-        {prizeMode === 'fixed' && (
-          <button
-            type="button"
-            onClick={onOpenPrizeEditorModal}
-            className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-violet-300 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-violet-200"
-          >
-            <Coins size={18} />
-            Editar premios
-          </button>
-        )}
-
-        <button
-          type="button"
-          onClick={onOpenPrizeSettingsModal}
-          className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-200"
-        >
-          <Settings2 size={18} />
-          Editar reglas de premio
         </button>
 
         <button
@@ -360,20 +265,6 @@ function AdminPanelCard({
             {members.length} miembros
           </div>
         </div>
-
-        {prizeMode === 'winner_takes_all' && (
-          <div className="mb-4 rounded-2xl bg-emerald-50 p-4">
-            <p className="text-sm font-black text-emerald-700">
-              Modalidad automática activa
-            </p>
-
-            <p className="mt-1 text-sm leading-6 text-slate-600">
-              En “Ganador se lleva todo” no se editan premios individuales. La
-              bolsa se calcula con participantes registrados × entrada por
-              participante. Para cambiar esto, usa “Editar reglas de premio”.
-            </p>
-          </div>
-        )}
 
         {members.length === 0 ? (
           <div className="rounded-2xl bg-slate-50 p-4">
@@ -403,10 +294,6 @@ function AdminPanelCard({
                     </p>
 
                     <div className="mt-2 flex flex-wrap gap-2">
-                      <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-black text-slate-500 sm:px-3 sm:text-xs">
-                        Entrada: {formatMoney(member.entryFee || entryFee)}
-                      </span>
-
                       <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-black text-slate-500 sm:px-3 sm:text-xs">
                         {member.role === 'owner'
                           ? 'Administrador'
