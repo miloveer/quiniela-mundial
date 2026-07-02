@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { X, Save } from 'lucide-react';
 import { getTeamDisplayName, getTeamFlag } from '../utils/teamUtils';
-import { formatMatchDate } from '../utils/matchUtils';
 
 function AdminManualPredictionModal({
   isOpen,
@@ -30,14 +29,17 @@ function AdminManualPredictionModal({
         homeScore: Number(homeScore),
         awayScore: Number(awayScore),
       });
-      // Limpiar formulario para seguir capturando rápido
+      
+      // Limpiar solo los campos de marcador y partido para seguir con el mismo jugador
       setHomeScore('');
       setAwayScore('');
       setSelectedMatchId('');
-      alert('¡Pronóstico guardado con éxito!');
+      
+      // Feedback visual rápido
+      alert('¡Pronóstico guardado! Puedes seguir con otro partido.');
     } catch (error) {
       console.error(error);
-      alert('Error al guardar el pronóstico. Revisa la consola o los permisos de Supabase.');
+      alert('Error al guardar. Verifica los datos.');
     } finally {
       setIsSubmitting(false);
     }
@@ -51,9 +53,12 @@ function AdminManualPredictionModal({
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <p className="text-sm font-bold text-emerald-700">Modo Administrador</p>
-            <h2 className="mt-1 text-xl font-black text-slate-950">Capturar Pronóstico</h2>
+            <h2 className="mt-1 text-xl font-black text-slate-950">Captura Manual</h2>
           </div>
-          <button onClick={onClose} className="rounded-2xl border border-slate-200 bg-white p-2 text-slate-500 hover:bg-slate-50">
+          <button 
+            onClick={onClose} 
+            className="rounded-2xl border border-slate-200 bg-white p-2 text-slate-500 hover:bg-slate-50"
+          >
             <X size={20} />
           </button>
         </div>
@@ -62,16 +67,13 @@ function AdminManualPredictionModal({
           <div>
             <label className="mb-1 block text-sm font-bold text-slate-700">Seleccionar Participante</label>
             <select
-              required
-              className="w-full rounded-xl border border-slate-300 p-3 text-sm"
               value={selectedUserId}
               onChange={(e) => setSelectedUserId(e.target.value)}
+              className="w-full rounded-xl border border-slate-300 p-3 text-sm outline-none focus:border-emerald-500"
             >
-              <option value="">-- Elige un usuario --</option>
-              {users.map((u) => (
-                <option key={u.userId || u.id} value={u.userId || u.id}>
-                  {u.displayName || u.name || u.email || 'Usuario'}
-                </option>
+              <option value="">Selecciona al jugador</option>
+              {users.map(u => (
+                <option key={u.uid} value={u.uid}>{u.displayName}</option>
               ))}
             </select>
           </div>
@@ -80,16 +82,18 @@ function AdminManualPredictionModal({
             <label className="mb-1 block text-sm font-bold text-slate-700">Seleccionar Partido</label>
             <select
               required
-              className="w-full rounded-xl border border-slate-300 p-3 text-sm"
+              className="w-full rounded-xl border border-slate-300 p-3 text-sm outline-none focus:border-emerald-500"
               value={selectedMatchId}
               onChange={(e) => setSelectedMatchId(e.target.value)}
             >
               <option value="">-- Elige un partido --</option>
-              {matches.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {getTeamDisplayName(m.homeTeam)} vs {getTeamDisplayName(m.awayTeam)} - {formatMatchDate(m.date)}
-                </option>
-              ))}
+              {matches
+                .filter(m => m.stageId !== 'group-stage')
+                .map((match) => (
+                  <option key={match.id} value={match.id}>
+                    {match.homeTeam} vs {match.awayTeam} ({match.stageId})
+                  </option>
+                ))}
             </select>
           </div>
 
@@ -105,6 +109,7 @@ function AdminManualPredictionModal({
                   value={homeScore}
                   onChange={(e) => setHomeScore(e.target.value)}
                   className="mt-2 w-16 rounded-lg border border-slate-300 p-2 text-center font-black"
+                  placeholder="0"
                 />
               </div>
               <span className="text-xl font-black text-slate-400">VS</span>
@@ -118,6 +123,7 @@ function AdminManualPredictionModal({
                   value={awayScore}
                   onChange={(e) => setAwayScore(e.target.value)}
                   className="mt-2 w-16 rounded-lg border border-slate-300 p-2 text-center font-black"
+                  placeholder="0"
                 />
               </div>
             </div>
@@ -125,11 +131,11 @@ function AdminManualPredictionModal({
 
           <button
             type="submit"
-            disabled={isSubmitting}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 p-3 font-black text-slate-950 transition hover:bg-emerald-300 disabled:opacity-50"
+            disabled={isSubmitting || !selectedUserId || !selectedMatchId}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 p-3 font-black text-white transition hover:bg-emerald-700 disabled:opacity-50"
           >
             <Save size={20} />
-            {isSubmitting ? 'Guardando...' : 'Guardar Pronóstico'}
+            {isSubmitting ? 'Guardando...' : 'Guardar y seguir'}
           </button>
         </form>
       </section>
