@@ -99,8 +99,8 @@ function AdminManualPredictionModal({
                   <div className="flex gap-2">
                     <input 
   type="number" 
-  inputMode="numeric" // <--- ESTO ES LO QUE FUERZA EL TECLADO NUMÉRICO
-  pattern="[0-9]*"   // <--- AYUDA EN NAVEGADORES ANTIGUOS
+  inputMode="decimal" 
+  pattern="[0-9]*"
   className="w-12 border border-slate-300 rounded-lg p-1 text-center font-bold" 
   placeholder="0"
   value={predictions[match.id]?.homeScore || ''}
@@ -109,8 +109,8 @@ function AdminManualPredictionModal({
 
 <input 
   type="number" 
-  inputMode="numeric" // <--- ESTO ES LO QUE FUERZA EL TECLADO NUMÉRICO
-  pattern="[0-9]*" 
+  inputMode="decimal" 
+  pattern="[0-9]*"
   className="w-12 border border-slate-300 rounded-lg p-1 text-center font-bold" 
   placeholder="0"
   value={predictions[match.id]?.awayScore || ''}
