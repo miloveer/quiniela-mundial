@@ -98,15 +98,24 @@ function AdminManualPredictionModal({
                   </div>
                   <div className="flex gap-2">
                     <input 
-                      type="number" className="w-12 border border-slate-300 rounded-lg p-1 text-center font-bold" placeholder="L"
-                      value={predictions[match.id]?.homeScore || ''}
-                      onChange={(e) => handleScoreChange(match.id, 'homeScore', e.target.value)}
-                    />
-                    <input 
-                      type="number" className="w-12 border border-slate-300 rounded-lg p-1 text-center font-bold" placeholder="V"
-                      value={predictions[match.id]?.awayScore || ''}
-                      onChange={(e) => handleScoreChange(match.id, 'awayScore', e.target.value)}
-                    />
+  type="number" 
+  inputMode="numeric" // <--- ESTO ES LO QUE FUERZA EL TECLADO NUMÉRICO
+  pattern="[0-9]*"   // <--- AYUDA EN NAVEGADORES ANTIGUOS
+  className="w-12 border border-slate-300 rounded-lg p-1 text-center font-bold" 
+  placeholder="0"
+  value={predictions[match.id]?.homeScore || ''}
+  onChange={(e) => handleScoreChange(match.id, 'homeScore', e.target.value)}
+/>
+
+<input 
+  type="number" 
+  inputMode="numeric" // <--- ESTO ES LO QUE FUERZA EL TECLADO NUMÉRICO
+  pattern="[0-9]*" 
+  className="w-12 border border-slate-300 rounded-lg p-1 text-center font-bold" 
+  placeholder="0"
+  value={predictions[match.id]?.awayScore || ''}
+  onChange={(e) => handleScoreChange(match.id, 'awayScore', e.target.value)}
+/>
                   </div>
                 </div>
               ))}
