@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { X, Save } from 'lucide-react';
 import { getTeamDisplayName, getTeamFlag } from '../utils/teamUtils';
 
@@ -10,134 +10,118 @@ function AdminManualPredictionModal({
   onSavePrediction,
 }) {
   const [selectedUserId, setSelectedUserId] = useState('');
-  const [selectedMatchId, setSelectedMatchId] = useState('');
-  const [homeScore, setHomeScore] = useState('');
-  const [awayScore, setAwayScore] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Estado para guardar múltiples pronósticos antes de enviarlos
+  const [predictions, setPredictions] = useState({});
+
+  // Filtramos solo los partidos de 16vos
+  const round32Matches = useMemo(() => 
+    matches.filter(m => m.stageId === 'round-32'), 
+  [matches]);
 
   if (!isOpen) return null;
 
+  const handleScoreChange = (matchId, field, value) => {
+    setPredictions(prev => ({
+      ...prev,
+      [matchId]: { 
+        ...prev[matchId], 
+        [field]: value 
+      }
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedUserId || !selectedMatchId || homeScore === '' || awayScore === '') return;
-    
+    if (!selectedUserId) return;
+
     setIsSubmitting(true);
     try {
-      await onSavePrediction({
-        userId: selectedUserId,
-        matchId: selectedMatchId,
-        homeScore: Number(homeScore),
-        awayScore: Number(awayScore),
-      });
-      
-      // Limpiar solo los campos de marcador y partido para seguir con el mismo jugador
-      setHomeScore('');
-      setAwayScore('');
-      setSelectedMatchId('');
-      
-      // Feedback visual rápido
-      alert('¡Pronóstico guardado! Puedes seguir con otro partido.');
+      // Recorremos el objeto de predicciones y guardamos solo las que tienen datos
+      for (const [matchId, scores] of Object.entries(predictions)) {
+        if (scores.homeScore !== '' && scores.awayScore !== '') {
+          await onSavePrediction({
+            userId: selectedUserId,
+            matchId,
+            homeScore: Number(scores.homeScore),
+            awayScore: Number(scores.awayScore),
+          });
+        }
+      }
+      setPredictions({}); // Limpiar estado
+      alert('¡Todos los pronósticos de 16vos fueron guardados!');
+      onClose(); // Cerramos al terminar
     } catch (error) {
       console.error(error);
-      alert('Error al guardar. Verifica los datos.');
+      alert('Error al guardar los pronósticos.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const selectedMatch = matches.find((m) => String(m.id) === selectedMatchId);
-
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-4 backdrop-blur-sm sm:items-center">
-      <section className="w-full max-w-md rounded-[2rem] bg-white p-5 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+      <section className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-[2rem] bg-white p-5 shadow-2xl">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-bold text-emerald-700">Modo Administrador</p>
-            <h2 className="mt-1 text-xl font-black text-slate-950">Captura Manual</h2>
+            <p className="text-sm font-bold text-emerald-700">Administrador</p>
+            <h2 className="text-xl font-black text-slate-950">Llenado Masivo 16vos</h2>
           </div>
-          <button 
-            onClick={onClose} 
-            className="rounded-2xl border border-slate-200 bg-white p-2 text-slate-500 hover:bg-slate-50"
-          >
+          <button onClick={onClose} className="rounded-2xl border border-slate-200 bg-white p-2 text-slate-500 hover:bg-slate-50">
             <X size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="mb-1 block text-sm font-bold text-slate-700">Seleccionar Participante</label>
-            <select
-              value={selectedUserId}
-              onChange={(e) => setSelectedUserId(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 p-3 text-sm outline-none focus:border-emerald-500"
-            >
-              <option value="">Selecciona al jugador</option>
-              {users.map(u => (
-                <option key={u.uid} value={u.uid}>{u.displayName}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-bold text-slate-700">Seleccionar Partido</label>
-            <select
-              required
-              className="w-full rounded-xl border border-slate-300 p-3 text-sm outline-none focus:border-emerald-500"
-              value={selectedMatchId}
-              onChange={(e) => setSelectedMatchId(e.target.value)}
-            >
-              <option value="">-- Elige un partido --</option>
-              {matches
-                .filter(m => m.stageId !== 'group-stage')
-                .map((match) => (
-                  <option key={match.id} value={match.id}>
-                    {match.homeTeam} vs {match.awayTeam} ({match.stageId})
-                  </option>
-                ))}
-            </select>
-          </div>
-
-          {selectedMatch && (
-            <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-4">
-              <div className="text-center">
-                <span className="text-2xl block">{getTeamFlag(selectedMatch.homeTeam)}</span>
-                <p className="text-xs font-bold truncate max-w-[80px]">{getTeamDisplayName(selectedMatch.homeTeam)}</p>
-                <input
-                  type="number"
-                  min="0"
-                  required
-                  value={homeScore}
-                  onChange={(e) => setHomeScore(e.target.value)}
-                  className="mt-2 w-16 rounded-lg border border-slate-300 p-2 text-center font-black"
-                  placeholder="0"
-                />
-              </div>
-              <span className="text-xl font-black text-slate-400">VS</span>
-              <div className="text-center">
-                <span className="text-2xl block">{getTeamFlag(selectedMatch.awayTeam)}</span>
-                <p className="text-xs font-bold truncate max-w-[80px]">{getTeamDisplayName(selectedMatch.awayTeam)}</p>
-                <input
-                  type="number"
-                  min="0"
-                  required
-                  value={awayScore}
-                  onChange={(e) => setAwayScore(e.target.value)}
-                  className="mt-2 w-16 rounded-lg border border-slate-300 p-2 text-center font-black"
-                  placeholder="0"
-                />
-              </div>
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={isSubmitting || !selectedUserId || !selectedMatchId}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 p-3 font-black text-white transition hover:bg-emerald-700 disabled:opacity-50"
+        <div className="mb-4">
+          <label className="mb-1 block text-sm font-bold text-slate-700">Seleccionar Participante</label>
+          <select
+            value={selectedUserId}
+            onChange={(e) => setSelectedUserId(e.target.value)}
+            className="w-full rounded-xl border border-slate-300 p-3 text-sm outline-none focus:border-emerald-500"
           >
-            <Save size={20} />
-            {isSubmitting ? 'Guardando...' : 'Guardar y seguir'}
-          </button>
-        </form>
+            <option value="">-- Elige al jugador --</option>
+            {users.map(u => (
+              <option key={u.uid} value={u.uid}>{u.displayName}</option>
+            ))}
+          </select>
+        </div>
+
+        {selectedUserId && (
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+            <div className="flex-1 overflow-y-auto pr-2 space-y-3">
+              {round32Matches.map((match) => (
+                <div key={match.id} className="flex items-center justify-between gap-2 border-b pb-2">
+                  <div className="w-1/2 flex items-center gap-2">
+                    <span className="text-lg">{getTeamFlag(match.homeTeam)}</span>
+                    <span className="text-xs font-bold truncate">{getTeamDisplayName(match.homeTeam)} vs {getTeamDisplayName(match.awayTeam)}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <input 
+                      type="number" className="w-12 border border-slate-300 rounded-lg p-1 text-center font-bold" placeholder="L"
+                      value={predictions[match.id]?.homeScore || ''}
+                      onChange={(e) => handleScoreChange(match.id, 'homeScore', e.target.value)}
+                    />
+                    <input 
+                      type="number" className="w-12 border border-slate-300 rounded-lg p-1 text-center font-bold" placeholder="V"
+                      value={predictions[match.id]?.awayScore || ''}
+                      onChange={(e) => handleScoreChange(match.id, 'awayScore', e.target.value)}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 p-3 font-black text-white transition hover:bg-emerald-700 disabled:opacity-50"
+            >
+              <Save size={20} />
+              {isSubmitting ? 'Guardando...' : 'Guardar todos los pronósticos'}
+            </button>
+          </form>
+        )}
       </section>
     </div>
   );
