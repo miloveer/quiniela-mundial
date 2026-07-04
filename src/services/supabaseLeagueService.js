@@ -242,3 +242,32 @@ export async function updateSupabaseLeaguePrizeSettings({
 
   return normalizeLeagueFromSupabase(data, []);
 }
+
+// Prende/apaga el candado de pronósticos de toda la liga (predictions_locked).
+// Cuando está en true, nadie (ni siquiera el admin desde la vista normal)
+// puede guardar pronósticos nuevos vía handleSavePrediction.
+export async function updateSupabaseLeaguePredictionsLock({
+  leagueId,
+  predictionsLocked,
+}) {
+  if (!leagueId) {
+    throw new Error('MISSING_LEAGUE_ID');
+  }
+
+  const { data, error } = await supabase
+    .from('leagues')
+    .update({
+      predictions_locked: Boolean(predictionsLocked),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', leagueId)
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error('UPDATE_SUPABASE_LEAGUE_PREDICTIONS_LOCK_ERROR:', error);
+    throw error;
+  }
+
+  return normalizeLeagueFromSupabase(data, []);
+}

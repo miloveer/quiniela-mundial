@@ -33,6 +33,7 @@ import {
   getSupabaseLeagueMembers as getLeagueMembers,
   getSupabaseUserLeagues as getUserLeagues,
   joinSupabaseLeague as joinLeague,
+  updateSupabaseLeaguePredictionsLock as updateLeaguePredictionsLock,
 } from "../services/supabaseLeagueService";
 
 import {
@@ -272,6 +273,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   const [pendingWhatsappPredictions, setPendingWhatsappPredictions] = useState([]);
   const [isLoadingPendingPredictions, setIsLoadingPendingPredictions] = useState(false);
   const [isSyncingFootballData, setIsSyncingFootballData] = useState(false);
+  const [isTogglingPredictionsLock, setIsTogglingPredictionsLock] = useState(false);
 
   const activeLeagueId = user?.activeLeagueId || user?.leagueCode || "default";
   const hasActiveLeague = Boolean(activeLeagueId && activeLeagueId !== "default");
@@ -684,6 +686,34 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
     } catch (error) {
       console.error("Error cargando partidos base en Supabase:", error);
       alert(error.message || "No se pudieron cargar los partidos base.");
+    }
+  }
+
+  async function handleTogglePredictionsLock() {
+    if (!isLeagueOwner) return alert("Solo el administrador puede abrir o cerrar la quiniela.");
+    if (!activeLeagueId || activeLeagueId === "default") return alert("Primero selecciona o crea una liga.");
+    if (isTogglingPredictionsLock) return;
+
+    const nextPredictionsLocked = !activeLeague?.predictionsLocked;
+
+    setIsTogglingPredictionsLock(true);
+    try {
+      await updateLeaguePredictionsLock({
+        leagueId: activeLeagueId,
+        predictionsLocked: nextPredictionsLocked,
+      });
+      setUserLeagues((prev) =>
+        prev.map((league) =>
+          league.id === activeLeagueId
+            ? { ...league, predictionsLocked: nextPredictionsLocked }
+            : league
+        )
+      );
+    } catch (error) {
+      console.error("Error actualizando el candado de pronósticos:", error);
+      alert("No se pudo actualizar el estado de la quiniela.");
+    } finally {
+      setIsTogglingPredictionsLock(false);
     }
   }
 
@@ -1229,6 +1259,9 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
               isSyncingFootballData={isSyncingFootballData}
               pendingWhatsappPredictions={pendingWhatsappPredictions}
               isLoadingPendingPredictions={isLoadingPendingPredictions}
+              predictionsLocked={Boolean(activeLeague?.predictionsLocked)}
+              isTogglingPredictionsLock={isTogglingPredictionsLock}
+              onTogglePredictionsLock={handleTogglePredictionsLock}
               onOpenResultModal={() => setIsResultModalOpen(true)}
               onOpenCreateLeagueModal={() => setIsCreateLeagueModalOpen(true)}
               onSyncFootballDataMatches={handleSyncFootballDataMatches}

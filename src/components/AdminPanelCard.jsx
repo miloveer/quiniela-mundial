@@ -1,9 +1,11 @@
 import {
   CheckCircle2,
   ClipboardList,
+  Lock,
   MessageCircle,
   PlusCircle,
   Trophy,
+  Unlock,
   UploadCloud,
   Keyboard,
   UserCheck,
@@ -47,6 +49,8 @@ function AdminPanelCard({
   isSyncingFootballData = false,
   pendingWhatsappPredictions = [],
   isLoadingPendingPredictions = false,
+  predictionsLocked = false,
+  isTogglingPredictionsLock = false,
   onOpenResultModal,
   onOpenCreateLeagueModal,
   onSyncFootballDataMatches,
@@ -55,6 +59,7 @@ function AdminPanelCard({
   onDeletePendingPrediction,
   onClaimPendingPredictions,
   onOpenManualPredictionModal,
+  onTogglePredictionsLock,
 }) {
   const [whatsappMatchId, setWhatsappMatchId] = useState('');
   const [whatsappReferenceName, setWhatsappReferenceName] = useState('');
@@ -134,6 +139,56 @@ function AdminPanelCard({
         <div className="rounded-2xl bg-white/10 p-3 text-emerald-300">
           <ClipboardList size={24} />
         </div>
+      </div>
+
+      {/* SWITCH: abrir/cerrar pronósticos de toda la liga */}
+      <div
+        className={`mb-5 flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between ${
+          predictionsLocked
+            ? 'border-rose-400/40 bg-rose-500/10'
+            : 'border-emerald-400/40 bg-emerald-500/10'
+        }`}
+      >
+        <div className="flex items-start gap-3">
+          <div
+            className={`rounded-2xl p-2 ${
+              predictionsLocked
+                ? 'bg-rose-400/20 text-rose-300'
+                : 'bg-emerald-400/20 text-emerald-300'
+            }`}
+          >
+            {predictionsLocked ? <Lock size={20} /> : <Unlock size={20} />}
+          </div>
+
+          <div>
+            <p className="text-sm font-black">
+              {predictionsLocked ? 'Quiniela cerrada' : 'Quiniela abierta'}
+            </p>
+
+            <p className="mt-1 text-xs leading-5 text-slate-300">
+              {predictionsLocked
+                ? 'Nadie puede guardar pronósticos nuevos mientras esté cerrada.'
+                : 'Los participantes pueden seguir capturando sus pronósticos.'}
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          role="switch"
+          aria-checked={!predictionsLocked}
+          disabled={isTogglingPredictionsLock}
+          onClick={onTogglePredictionsLock}
+          className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-60 ${
+            predictionsLocked ? 'bg-slate-700' : 'bg-emerald-400'
+          }`}
+        >
+          <span
+            className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition ${
+              predictionsLocked ? 'translate-x-1' : 'translate-x-7'
+            }`}
+          />
+        </button>
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
