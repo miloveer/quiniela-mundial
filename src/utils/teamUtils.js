@@ -23,9 +23,9 @@ const TEAM_FLAGS = {
   spain: '🇪🇸',
   france: '🇫🇷',
   germany: '🇩🇪',
-  england: '🇬🇧',
-  scotland: 'SCO',
-  wales: 'WAL',
+  england: '🏴',
+  scotland: '🏴',
+  wales: '🏴',
   portugal: '🇵🇹',
   italy: '🇮🇹',
   netherlands: '🇳🇱',
@@ -53,8 +53,8 @@ const TEAM_FLAGS = {
   'republic of ireland': '🇮🇪',
   greece: '🇬🇷',
   'bosnia and herzegovina': '🇧🇦',
-'bosnia-herzegovina': '🇧🇦',
-bosnia: '🇧🇦',
+  'bosnia-herzegovina': '🇧🇦',
+  bosnia: '🇧🇦',
 
   // Asia
   japan: '🇯🇵',
@@ -177,8 +177,8 @@ const TEAM_TRANSLATIONS = {
   'republic of ireland': 'Irlanda',
   greece: 'Grecia',
   'bosnia and herzegovina': 'Bosnia y Herzegovina',
-'bosnia-herzegovina': 'Bosnia y Herzegovina',
-bosnia: 'Bosnia y Herzegovina',
+  'bosnia-herzegovina': 'Bosnia y Herzegovina',
+  bosnia: 'Bosnia y Herzegovina',
 
   // Asia
   japan: 'Japón',
@@ -246,6 +246,125 @@ bosnia: 'Bosnia y Herzegovina',
   'new zealand': 'Nueva Zelanda',
 };
 
+// Códigos ISO-3166 (o de región para las selecciones del Reino Unido) que
+// usa flagcdn.com para servir la imagen real de la bandera de cada equipo.
+const TEAM_ISO_CODES = {
+  mexico: 'mx',
+  'united states': 'us',
+  usa: 'us',
+  'united states of america': 'us',
+  canada: 'ca',
+
+  argentina: 'ar',
+  brazil: 'br',
+  brasil: 'br',
+  uruguay: 'uy',
+  colombia: 'co',
+  ecuador: 'ec',
+  chile: 'cl',
+  peru: 'pe',
+  paraguay: 'py',
+  bolivia: 'bo',
+  venezuela: 've',
+
+  spain: 'es',
+  france: 'fr',
+  germany: 'de',
+  england: 'gb-eng',
+  scotland: 'gb-sct',
+  wales: 'gb-wls',
+  portugal: 'pt',
+  italy: 'it',
+  netherlands: 'nl',
+  holland: 'nl',
+  belgium: 'be',
+  croatia: 'hr',
+  switzerland: 'ch',
+  denmark: 'dk',
+  serbia: 'rs',
+  poland: 'pl',
+  austria: 'at',
+  hungary: 'hu',
+  romania: 'ro',
+  ukraine: 'ua',
+  turkey: 'tr',
+  türkiye: 'tr',
+  czechia: 'cz',
+  'czech republic': 'cz',
+  slovakia: 'sk',
+  slovenia: 'si',
+  norway: 'no',
+  sweden: 'se',
+  finland: 'fi',
+  ireland: 'ie',
+  'republic of ireland': 'ie',
+  greece: 'gr',
+  'bosnia and herzegovina': 'ba',
+  'bosnia-herzegovina': 'ba',
+  bosnia: 'ba',
+
+  japan: 'jp',
+  'south korea': 'kr',
+  'korea republic': 'kr',
+  korea: 'kr',
+  australia: 'au',
+  iran: 'ir',
+  'ir iran': 'ir',
+  'saudi arabia': 'sa',
+  qatar: 'qa',
+  iraq: 'iq',
+  jordan: 'jo',
+  uzbekistan: 'uz',
+  china: 'cn',
+  indonesia: 'id',
+  thailand: 'th',
+  vietnam: 'vn',
+  'united arab emirates': 'ae',
+  uae: 'ae',
+  oman: 'om',
+  bahrain: 'bh',
+  kuwait: 'kw',
+
+  morocco: 'ma',
+  senegal: 'sn',
+  ghana: 'gh',
+  nigeria: 'ng',
+  cameroon: 'cm',
+  tunisia: 'tn',
+  egypt: 'eg',
+  algeria: 'dz',
+  mali: 'ml',
+  ivory: 'ci',
+  'ivory coast': 'ci',
+  "cote d'ivoire": 'ci',
+  'cote divoire': 'ci',
+  'south africa': 'za',
+  zambia: 'zm',
+  angola: 'ao',
+  congo: 'cg',
+  'dr congo': 'cd',
+  'democratic republic of congo': 'cd',
+  gabon: 'ga',
+  guinea: 'gn',
+  'equatorial guinea': 'gq',
+  cape: 'cv',
+  'cape verde': 'cv',
+
+  'costa rica': 'cr',
+  panama: 'pa',
+  honduras: 'hn',
+  jamaica: 'jm',
+  'el salvador': 'sv',
+  guatemala: 'gt',
+  haiti: 'ht',
+  curaçao: 'cw',
+  curacao: 'cw',
+  'trinidad and tobago': 'tt',
+  'dominican republic': 'do',
+
+  'new zealand': 'nz',
+};
+
 export function normalizeTeamName(teamName = '') {
   return teamName
     .toString()
@@ -257,27 +376,41 @@ export function normalizeTeamName(teamName = '') {
     .replace(/\./g, '');
 }
 
+// Índice de búsqueda: registra tanto el nombre en inglés (clave original)
+// como su traducción al español, apuntando ambos a la MISMA clave canónica.
+// Así "Marruecos" o "Morocco" (o "morocco." con acentos/mayúsculas) resuelven
+// al mismo equipo, sin importar en qué idioma se haya escrito en Supabase.
+const TEAM_LOOKUP_INDEX = {};
+
+Object.keys(TEAM_FLAGS).forEach((key) => {
+  TEAM_LOOKUP_INDEX[normalizeTeamName(key)] = key;
+});
+
+Object.entries(TEAM_TRANSLATIONS).forEach(([key, spanishName]) => {
+  TEAM_LOOKUP_INDEX[normalizeTeamName(key)] = key;
+  TEAM_LOOKUP_INDEX[normalizeTeamName(spanishName)] = key;
+});
+
 function findTeamKey(teamName = '') {
   const normalizedTeamName = normalizeTeamName(teamName);
 
-  if (TEAM_FLAGS[normalizedTeamName] || TEAM_TRANSLATIONS[normalizedTeamName]) {
-    return normalizedTeamName;
+  if (TEAM_LOOKUP_INDEX[normalizedTeamName]) {
+    return TEAM_LOOKUP_INDEX[normalizedTeamName];
   }
 
-  return Object.keys({
-    ...TEAM_FLAGS,
-    ...TEAM_TRANSLATIONS,
-  }).find((teamKey) => {
-    const normalizedTeamKey = normalizeTeamName(teamKey);
-
+  const matchedIndexKey = Object.keys(TEAM_LOOKUP_INDEX).find((indexKey) => {
     return (
-      normalizedTeamName === normalizedTeamKey ||
-      normalizedTeamName.includes(normalizedTeamKey) ||
-      normalizedTeamKey.includes(normalizedTeamName)
+      normalizedTeamName === indexKey ||
+      normalizedTeamName.includes(indexKey) ||
+      indexKey.includes(normalizedTeamName)
     );
   });
+
+  return matchedIndexKey ? TEAM_LOOKUP_INDEX[matchedIndexKey] : undefined;
 }
 
+// Emoji de bandera (se usa como respaldo si la imagen real no carga,
+// o si el equipo aún no está definido, p. ej. "Por definir").
 export function getTeamFlag(teamName = '') {
   const teamKey = findTeamKey(teamName);
 
@@ -288,4 +421,19 @@ export function getTeamDisplayName(teamName = '') {
   const teamKey = findTeamKey(teamName);
 
   return teamKey ? TEAM_TRANSLATIONS[teamKey] || teamName : teamName;
+}
+
+// URL de la bandera real (PNG) desde flagcdn.com. Regresa null si el
+// equipo todavía no está definido (p. ej. "Por definir"), para que el
+// componente que la use pueda mostrar un respaldo.
+// size acepta: w20, w40, w80, w160, w320, w640, w1280, w2560
+export function getTeamFlagUrl(teamName = '', size = 'w80') {
+  const teamKey = findTeamKey(teamName);
+  const isoCode = teamKey ? TEAM_ISO_CODES[teamKey] : null;
+
+  if (!isoCode) {
+    return null;
+  }
+
+  return `https://flagcdn.com/${size}/${isoCode}.png`;
 }

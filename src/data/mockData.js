@@ -31,6 +31,37 @@ export const stages = [
   },
 ];
 
+// Agrupa etapas para mostrar el ranking combinado (según pediste: 16vos +
+// 8vos juntos, 4tos + semis juntos, y la final ya incluye el 3er lugar
+// porque comparten stageId 'finals'). Esto NO afecta cómo se navegan los
+// partidos/brackets, solo cómo se agrupan las tablas de posiciones.
+export const rankingStageGroups = [
+  {
+    id: 'group-stage',
+    label: 'Grupos',
+    fullName: 'Fase de grupos',
+    stageIds: ['group-stage'],
+  },
+  {
+    id: 'round-32-16',
+    label: '16vos y 8vos',
+    fullName: 'Dieciseisavos y Octavos',
+    stageIds: ['round-32', 'round-16'],
+  },
+  {
+    id: 'quarters-semis',
+    label: '4tos y Semis',
+    fullName: 'Cuartos y Semifinales',
+    stageIds: ['quarter-finals', 'semi-finals'],
+  },
+  {
+    id: 'finals',
+    label: 'Final',
+    fullName: 'Final + tercer lugar',
+    stageIds: ['finals'],
+  },
+];
+
 export const matches = [
   {
     id: 'r32-001',
@@ -208,6 +239,96 @@ export const matches = [
     result: null,
     isLocked: false,
   },
+
+  // === OCTAVOS DE FINAL (8vos) ===
+{
+  id: 'r16-001',
+  stageId: 'round-16',
+  homeTeam: 'Paraguay',
+  awayTeam: 'Francia',
+  date: '2026-07-04T16:00:00',
+  stadium: 'Philadelphia Stadium',
+  userPrediction: null,
+  result: null,
+  isLocked: false,
+},
+{
+  id: 'r16-002',
+  stageId: 'round-16',
+  homeTeam: 'Canadá',
+  awayTeam: 'Marruecos',
+  date: '2026-07-04T20:00:00',
+  stadium: 'Houston Stadium',
+  userPrediction: null,
+  result: null,
+  isLocked: false,
+},
+{
+  id: 'r16-003',
+  stageId: 'round-16',
+  homeTeam: 'Brasil',
+  awayTeam: 'Noruega',
+  date: '2026-07-05T16:00:00',
+  stadium: 'New York New Jersey Stadium',
+  userPrediction: null,
+  result: null,
+  isLocked: false,
+},
+{
+  id: 'r16-004',
+  stageId: 'round-16',
+  homeTeam: 'México',
+  awayTeam: 'Inglaterra',
+  date: '2026-07-05T20:00:00',
+  stadium: 'Estadio Azteca',
+  userPrediction: null,
+  result: null,
+  isLocked: false,
+},
+{
+  id: 'r16-005',
+  stageId: 'round-16',
+  homeTeam: 'Portugal',
+  awayTeam: 'España',
+  date: '2026-07-06T16:00:00',
+  stadium: 'Dallas Stadium',
+  userPrediction: null,
+  result: null,
+  isLocked: false,
+},
+{
+  id: 'r16-006',
+  stageId: 'round-16',
+  homeTeam: 'Estados Unidos',
+  awayTeam: 'Bélgica',
+  date: '2026-07-06T20:00:00',
+  stadium: 'Seattle Stadium',
+  userPrediction: null,
+  result: null,
+  isLocked: false,
+},
+{
+  id: 'r16-007',
+  stageId: 'round-16',
+  homeTeam: 'Egipto',
+  awayTeam: 'Argentina',
+  date: '2026-07-07T16:00:00',
+  stadium: 'Atlanta Stadium',
+  userPrediction: null,
+  result: null,
+  isLocked: false,
+},
+{
+  id: 'r16-008',
+  stageId: 'round-16',
+  homeTeam: 'Suiza',
+  awayTeam: 'Colombia',
+  date: '2026-07-07T20:00:00',
+  stadium: 'BC Place Vancouver',
+  userPrediction: null,
+  result: null,
+  isLocked: false,
+},
 ];
 
 export const ranking = [];

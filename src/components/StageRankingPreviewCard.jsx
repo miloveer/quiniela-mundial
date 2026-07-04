@@ -1,6 +1,6 @@
 import { Trophy, Medal } from 'lucide-react';
-import { buildRankingFromPredictions, buildStageRanking } from '../utils/scoreUtils';
-import { getStageMatches } from '../utils/matchUtils';
+import { buildRanking, buildRankingFromPredictions } from '../utils/scoreUtils';
+import { getStagesMatches } from '../utils/matchUtils';
 
 function getRankIcon(index) {
   if (index === 0) {
@@ -19,7 +19,7 @@ function getRankIcon(index) {
 }
 
 function StageRankingPreviewCard({
-  stages = [],
+  stageGroups = [],
   matches = [],
   rankingUsers = [],
   memberPredictions = [],
@@ -51,32 +51,32 @@ function StageRankingPreviewCard({
       </div>
 
       <div className="space-y-3">
-        {stages.map((stage) => {
-          const stageMatches = getStageMatches(matches, stage.id);
+        {stageGroups.map((group) => {
+          const groupMatches = getStagesMatches(matches, group.stageIds);
 
-          const stageRanking =
+          const groupRanking =
             activeLeagueId !== 'default' && memberPredictions.length > 0
               ? buildRankingFromPredictions({
                   predictions: memberPredictions,
-                  matches: stageMatches,
+                  matches: groupMatches,
                   currentUser,
                   userProfiles,
                 })
-              : buildStageRanking(rankingUsers, matches, stage.id);
+              : buildRanking(rankingUsers, groupMatches);
 
-          const topUsers = stageRanking.slice(0, 3);
+          const topUsers = groupRanking.slice(0, 3);
 
           return (
             <button
-              key={stage.id}
+              key={group.id}
               type="button"
-              onClick={() => onSelectStage(stage.id)}
+              onClick={() => onSelectStage(group.id)}
               className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-emerald-300 hover:bg-emerald-50"
             >
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
                   <p className="font-black text-slate-950">
-                    {stage.fullName || stage.label}
+                    {group.fullName || group.label}
                   </p>
 
                   <p className="mt-1 text-xs font-bold text-slate-400">

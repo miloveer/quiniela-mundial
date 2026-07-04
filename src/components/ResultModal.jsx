@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Check, Search, Trophy, X } from 'lucide-react';
-import { formatMatchDate } from '../utils/matchUtils';
+import { formatMatchDate, isKnockoutStage } from '../utils/matchUtils';
 
 function ResultModal({
   isOpen,
@@ -13,6 +13,7 @@ function ResultModal({
   const [selectedMatchId, setSelectedMatchId] = useState('');
   const [homeScore, setHomeScore] = useState('');
   const [awayScore, setAwayScore] = useState('');
+  const [advancesTeam, setAdvancesTeam] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
   const filteredMatches = useMemo(() => {
@@ -32,6 +33,9 @@ function ResultModal({
   }, [matches, searchText]);
 
   const selectedMatch = matches.find((match) => match.id === selectedMatchId);
+  const selectedMatchIsKnockout = selectedMatch ? isKnockoutStage(selectedMatch.stageId) : false;
+  const isDraftDraw =
+    homeScore !== '' && awayScore !== '' && Number(homeScore) === Number(awayScore);
 
   if (!isOpen) {
     return null;
@@ -44,6 +48,7 @@ function ResultModal({
       setSelectedMatchId('');
       setHomeScore('');
       setAwayScore('');
+      setAdvancesTeam('');
       setErrorMessage('');
       return;
     }
@@ -51,6 +56,7 @@ function ResultModal({
     setSelectedMatchId(match.id);
     setHomeScore(match.result?.homeScore ?? '');
     setAwayScore(match.result?.awayScore ?? '');
+    setAdvancesTeam(match.result?.advancesTeam ?? '');
     setErrorMessage('');
   }
 
@@ -80,15 +86,24 @@ function ResultModal({
       return;
     }
 
+    const isDraw = parsedHomeScore === parsedAwayScore;
+
+    if (selectedMatchIsKnockout && isDraw && !advancesTeam) {
+      setErrorMessage('Es empate: selecciona qué equipo avanzó.');
+      return;
+    }
+
     onSaveResult(selectedMatch.id, {
       homeScore: parsedHomeScore,
       awayScore: parsedAwayScore,
+      advancesTeam: selectedMatchIsKnockout && isDraw ? advancesTeam : null,
     });
 
     setErrorMessage('');
     setSelectedMatchId('');
     setHomeScore('');
     setAwayScore('');
+    setAdvancesTeam('');
   }
 
   function handleClearSelectedResult() {
@@ -116,6 +131,7 @@ function ResultModal({
     setSelectedMatchId('');
     setHomeScore('');
     setAwayScore('');
+    setAdvancesTeam('');
   }
 
   function handleClose() {
@@ -123,6 +139,7 @@ function ResultModal({
     setSelectedMatchId('');
     setHomeScore('');
     setAwayScore('');
+    setAdvancesTeam('');
     setErrorMessage('');
     onClose();
   }
@@ -244,6 +261,16 @@ function ResultModal({
                         <p className="mt-2 text-sm font-black text-emerald-700">
                           Resultado: {match.result.homeScore} -{' '}
                           {match.result.awayScore}
+                          {match.result.homeScore === match.result.awayScore &&
+                            match.result.advancesTeam && (
+                              <span className="ml-2 text-slate-500">
+                                (Avanzó:{' '}
+                                {match.result.advancesTeam === 'home'
+                                  ? match.homeTeam
+                                  : match.awayTeam}
+                                )
+                              </span>
+                            )}
                         </p>
                       )}
                     </button>
@@ -301,6 +328,41 @@ function ResultModal({
                             />
                           </label>
                         </div>
+
+                        {selectedMatchIsKnockout && isDraftDraw && (
+                          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3">
+                            <p className="mb-2 text-xs font-black text-amber-700">
+                              Es empate: ¿qué equipo avanzó? (definido por
+                              penales / tiempo extra)
+                            </p>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setAdvancesTeam('home')}
+                                className={`truncate rounded-xl px-3 py-2 text-xs font-black transition ${
+                                  advancesTeam === 'home'
+                                    ? 'bg-emerald-600 text-white'
+                                    : 'border border-slate-200 bg-white text-slate-600'
+                                }`}
+                              >
+                                {match.homeTeam}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setAdvancesTeam('away')}
+                                className={`truncate rounded-xl px-3 py-2 text-xs font-black transition ${
+                                  advancesTeam === 'away'
+                                    ? 'bg-emerald-600 text-white'
+                                    : 'border border-slate-200 bg-white text-slate-600'
+                                }`}
+                              >
+                                {match.awayTeam}
+                              </button>
+                            </div>
+                          </div>
+                        )}
 
                         {errorMessage && (
                           <div className="mt-4 rounded-2xl bg-rose-50 p-3 text-sm font-bold leading-6 text-rose-600">

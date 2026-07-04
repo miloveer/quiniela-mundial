@@ -37,6 +37,30 @@ export function getStageMatches(matches = [], stageId) {
   return matches.filter((match) => match.stageId === stageId);
 }
 
+// Todas las etapas que ya no son fase de grupos, es decir, todas las
+// eliminatorias directas (aquí es donde aplica la regla de "quién avanza").
+export const KNOCKOUT_STAGE_IDS = [
+  'round-32',
+  'round-16',
+  'quarter-finals',
+  'semi-finals',
+  'finals',
+];
+
+export function isKnockoutStage(stageId) {
+  return KNOCKOUT_STAGE_IDS.includes(stageId);
+}
+
+// Igual que getStageMatches, pero acepta varias etapas a la vez. Se usa
+// para juntar rankings de dos fases (p. ej. 16vos + 8vos) en una sola tabla.
+export function getStagesMatches(matches = [], stageIds = []) {
+  if (!stageIds || stageIds.length === 0) {
+    return matches;
+  }
+
+  return matches.filter((match) => stageIds.includes(match.stageId));
+}
+
 export function getMinutesBeforeMatch(matchDate) {
   const now = new Date();
   const date = new Date(matchDate);

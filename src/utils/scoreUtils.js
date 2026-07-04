@@ -24,34 +24,87 @@ export function getMatchWinner(score) {
   return getScoreOutcome(score);
 }
 
-export function calculatePredictionPoints(prediction, result) {
+// Determina qué equipo avanza a partir de un marcador ('home' | 'away').
+// Si en los 90 minutos hay un ganador claro, ese es el que avanza.
+// Si hay empate, el avance lo define aparte el campo `advancesTeam`
+// (elegido por el usuario al predecir, o por el admin al cargar el
+// resultado oficial, ya que en la realidad eso se resuelve en penales).
+function getAdvancingTeam(scoreEntry, outcome) {
+  if (!scoreEntry) {
+    return null;
+  }
+
+  if (outcome !== 'draw') {
+    return outcome;
+  }
+
+  return scoreEntry.advancesTeam || null;
+}
+
+// options.isKnockoutStage: true para 16vos en adelante (todo lo que no es
+// fase de grupos). Cambia la fórmula de puntos:
+//  - Fase de grupos: 3 pts marcador exacto, 1 pt acertar resultado (ganador/empate).
+//  - Eliminatorias: 3 pts marcador exacto (90 min) + 1 pt extra si además
+//    acierta qué equipo avanza (relevante en empates, donde el avance se
+//    define aparte).
+export function calculatePredictionPoints(prediction, result, options = {}) {
   if (!prediction || !result) {
     return 0;
   }
 
+  const { isKnockoutStage = false } = options;
+
   const predictedOutcome = getScoreOutcome(prediction);
   const realOutcome = getScoreOutcome(result);
-
-  const guessedOutcome = predictedOutcome === realOutcome;
 
   const guessedExactScore =
     prediction.homeScore === result.homeScore &&
     prediction.awayScore === result.awayScore;
 
+  if (!isKnockoutStage) {
+    if (guessedExactScore) {
+      return 3;
+    }
+
+    if (predictedOutcome === realOutcome) {
+      return 1;
+    }
+
+    return 0;
+  }
+
+  let points = 0;
+
   if (guessedExactScore) {
-    return 3;
+    points += 3;
+  } else if (predictedOutcome === realOutcome) {
+    points += 1;
   }
 
-  if (guessedOutcome) {
-    return 1;
+  const predictedAdvancingTeam = getAdvancingTeam(prediction, predictedOutcome);
+  const realAdvancingTeam = getAdvancingTeam(result, realOutcome);
+
+  if (
+    predictedAdvancingTeam &&
+    realAdvancingTeam &&
+    predictedAdvancingTeam === realAdvancingTeam
+  ) {
+    points += 1;
   }
 
-  return 0;
+  return points;
 }
 
 export function calculateTotalPoints(matches = []) {
   return matches.reduce((total, match) => {
-    return total + calculatePredictionPoints(match.userPrediction, match.result);
+    const isKnockoutStage = match.stageId !== 'group-stage';
+
+    return (
+      total +
+      calculatePredictionPoints(match.userPrediction, match.result, {
+        isKnockoutStage,
+      })
+    );
   }, 0);
 }
 
@@ -82,7 +135,10 @@ export function calculateUserStats(user, matches = []) {
   const stats = matches.reduce(
     (accumulator, match) => {
       const prediction = user.predictions?.[match.id] ?? null;
-      const points = calculatePredictionPoints(prediction, match.result);
+      const isKnockoutStage = match.stageId !== 'group-stage';
+      const points = calculatePredictionPoints(prediction, match.result, {
+        isKnockoutStage,
+      });
 
       if (prediction) {
         accumulator.predictionsCount += 1;
@@ -153,6 +209,18 @@ export function buildRanking(users = [], matches = []) {
     }));
 }
 
+// Igual que buildRanking, pero filtrando primero los partidos que
+// pertenezcan a cualquiera de las etapas indicadas. Sirve para juntar el
+// ranking de varias fases en una sola tabla (p. ej. 16vos + 8vos).
+export function buildRankingForStages(users = [], matches = [], stageIds = []) {
+  const stageMatches =
+    stageIds.length > 0
+      ? matches.filter((match) => stageIds.includes(match.stageId))
+      : matches;
+
+  return buildRanking(users, stageMatches);
+}
+
 export function getUserRankingPosition(ranking = [], userName) {
   const user = ranking.find((rankingUser) => {
     return rankingUser.name?.toLowerCase() === userName?.toLowerCase();
@@ -180,6 +248,17 @@ export function buildRankingFromPredictions({
       return accumulator;
     }
 
+    const match = matches.find((currentMatch) => {
+      return currentMatch.id === predictionDoc.matchId;
+    });
+
+    // Si el partido no pertenece al conjunto de partidos que nos pasaron
+    // (por ejemplo, estamos armando el ranking de una fase específica),
+    // esta predicción no cuenta para esta tabla.
+    if (!match) {
+      return accumulator;
+    }
+
     const userProfile = userProfiles.find((profile) => {
       return profile.uid === userId || profile.id === userId;
     });
@@ -203,12 +282,11 @@ export function buildRankingFromPredictions({
       };
     }
 
-    const match = matches.find((currentMatch) => {
-      return currentMatch.id === predictionDoc.matchId;
-    });
-
     const prediction = predictionDoc.prediction;
-    const points = calculatePredictionPoints(prediction, match?.result);
+    const isKnockoutStage = match.stageId !== 'group-stage';
+    const points = calculatePredictionPoints(prediction, match?.result, {
+      isKnockoutStage,
+    });
 
     accumulator[userId].points += points;
 

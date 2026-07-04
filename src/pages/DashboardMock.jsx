@@ -7,6 +7,7 @@ import DashboardSummary from "../components/DashboardSummary";
 import StageTabs from "../components/StageTabs";
 import CompactMatchCard from "../components/CompactMatchCard";
 import MatchFilters from "../components/MatchFilters";
+import MatchCard from "../components/MatchCard";
 import RankingCard from "../components/RankingCard";
 import JoinLeagueModal from "../components/JoinLeagueModal";
 import PendingMatchesCard from "../components/PendingMatchesCard";
@@ -20,6 +21,8 @@ import StageRankingPreviewCard from "../components/StageRankingPreviewCard";
 import GroupStandingsCard from "../components/GroupStandingsCard";
 import MatchPredictionsModal from "../components/MatchPredictionsModal";
 import AdminManualPredictionModal from '../components/AdminManualPredictionModal';
+
+import BracketPair from '../components/BracketPair';
 
 import { ensureSupabaseProfile } from "../services/supabaseProfileService";
 import { syncFootballDataMatches } from "../services/footballDataSyncService";
@@ -54,12 +57,13 @@ import {
 import {
   matches as initialMatches,
   stages,
+  rankingStageGroups,
 } from "../data/mockData";
 
 import {
   buildRanking,
   buildRankingFromPredictions,
-  buildStageRanking,
+  buildRankingForStages,
   calculateExactScores,
   calculateResultHits,
   calculateTotalPoints,
@@ -82,6 +86,7 @@ import {
   getPendingMatches,
   getPendingMatchesList,
   getStageMatches,
+  getStagesMatches,
   sortMatchesByStatusAndDate,
 } from "../utils/matchUtils";
 
@@ -243,6 +248,7 @@ function sortMatchesTodayFirst(matchesToSort = []) {
 function DashboardMock({ user, onLogout, onUpdateUser }) {
   const [activeSection, setActiveSection] = useState("home");
   const [activeStageId, setActiveStageId] = useState(stages[0].id);
+  const [activeRankingGroupId, setActiveRankingGroupId] = useState(rankingStageGroups[0].id);
   const [activeMatchFilter, setActiveMatchFilter] = useState("all");
   const [matchSearchTerm, setMatchSearchTerm] = useState("");
   const [activeStandingsGroup, setActiveStandingsGroup] = useState("");
@@ -252,7 +258,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [isCreateLeagueModalOpen, setIsCreateLeagueModalOpen] = useState(false);
   const [selectedPredictionsMatch, setSelectedPredictionsMatch] = useState(null);
-  
+
   const [isManualPredictionModalOpen, setIsManualPredictionModalOpen] = useState(false);
 
   const [userLeagues, setUserLeagues] = useState([]);
@@ -287,6 +293,8 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   const visibleMatches = hasActiveLeague ? filterMatchesForParticipant(matches, stages) : [];
 
   const activeStage = stages.find((stage) => stage.id === activeStageId);
+  const activeRankingGroup =
+    rankingStageGroups.find((group) => group.id === activeRankingGroupId) || rankingStageGroups[0];
 
   const stageMatches = useMemo(() => {
     return getStageMatches(visibleMatches, activeStageId);
@@ -445,12 +453,12 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
   const stageRanking = hasActiveLeague && firestoreRanking.length > 0
     ? buildRankingFromPredictions({
         predictions: memberPredictions,
-        matches: getStageMatches(allLeagueMatches, activeStageId),
+        matches: getStagesMatches(allLeagueMatches, activeRankingGroup.stageIds),
         currentUser: user,
         userProfiles,
       })
     : hasActiveLeague
-      ? buildStageRanking(rankingUsers, allLeagueMatches, activeStageId)
+      ? buildRankingForStages(rankingUsers, allLeagueMatches, activeRankingGroup.stageIds)
       : [];
 
   function handleChangeSection(sectionId) {
@@ -471,6 +479,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
           ? {
               homeScore: Number(userPrediction.prediction?.homeScore ?? userPrediction.homeScore),
               awayScore: Number(userPrediction.prediction?.awayScore ?? userPrediction.awayScore),
+              advancesTeam: userPrediction.prediction?.advancesTeam ?? userPrediction.advancesTeam ?? null,
             }
           : match.userPrediction || null,
       };
@@ -781,6 +790,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       await savePrediction({
         leagueId: activeLeagueId, matchId, userId: user.uid,
         homeScore: Number(prediction.homeScore), awayScore: Number(prediction.awayScore),
+        advancesTeam: prediction.advancesTeam || null,
       });
       await loadLeaguePredictions();
       await loadUserProfiles();
@@ -789,13 +799,14 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
       alert("Tu pronóstico no pudo sincronizarse correctamente.");
     }
   }
-  
-  async function handleSaveManualPrediction({ userId, matchId, homeScore, awayScore }) {
+
+  async function handleSaveManualPrediction({ userId, matchId, homeScore, awayScore, advancesTeam }) {
     if (!isLeagueOwner) return alert("Solo el administrador puede capturar pronósticos manuales.");
     try {
       await savePrediction({
         leagueId: activeLeagueId, matchId, userId,
         homeScore: Number(homeScore), awayScore: Number(awayScore),
+        advancesTeam: advancesTeam || null,
       });
       await loadLeaguePredictions();
       await loadUserProfiles();
@@ -1008,15 +1019,15 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                 />
 
                 <StageRankingPreviewCard
-                  stages={stages}
+                  stageGroups={rankingStageGroups}
                   matches={visibleMatches}
                   rankingUsers={rankingUsers}
                   memberPredictions={memberPredictions}
                   currentUser={user}
                   userProfiles={userProfiles}
                   activeLeagueId={activeLeagueId}
-                  onSelectStage={(stageId) => {
-                    setActiveStageId(stageId);
+                  onSelectStage={(groupId) => {
+                    setActiveRankingGroupId(groupId);
                     setActiveSection("ranking");
                   }}
                 />
@@ -1040,28 +1051,15 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
           </div>
         )}
 
-        {activeSection === "matches" && (
-          <>
-            {!hasActiveLeague ? (
-              <EmptyLeagueState
-                onJoinLeague={() => setIsJoinLeagueModalOpen(true)}
-                onCreateLeague={() => setIsCreateLeagueModalOpen(true)}
-              />
-            ) : (
-              <section className="space-y-3">
+        {activeSection === "matches" && (() => {
+          // La vista de llaves (bracket) solo aplica a partir de 16vos.
+          // Fase de grupos usa la vista de lista normal.
+          const isBracketStage = activeStageId !== "group-stage";
+
+          if (!isBracketStage) {
+            return (
+              <div className="space-y-4">
                 <section className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-3 shadow-sm backdrop-blur">
-                  <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-widest text-emerald-600">
-                        Etapas
-                      </p>
-
-                      <h2 className="text-lg font-black text-slate-950">
-                        {activeStage?.fullName}
-                      </h2>
-                    </div>
-                  </div>
-
                   <StageTabs
                     stages={stages}
                     activeStageId={activeStageId}
@@ -1069,292 +1067,78 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                   />
                 </section>
 
-                <section className="grid gap-2 md:grid-cols-2">
-                  <article className="rounded-[1.25rem] border border-slate-200 bg-white p-3 shadow-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-[11px] font-black uppercase tracking-widest text-emerald-600">
-                          Resumen de etapa
-                        </p>
-
-                        <h3 className="mt-1 truncate text-base font-black text-slate-950">
-                          {activeStage?.fullName}
-                        </h3>
-                      </div>
-
-                      <div className="rounded-2xl bg-slate-950 px-3 py-2 text-center text-white">
-                        <p className="text-lg font-black">
-                          {stageTotalMatches}
-                        </p>
-                        <p className="text-[9px] font-bold uppercase text-slate-400">
-                          Partidos
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 grid grid-cols-2 gap-2 text-center">
-                      <div className="rounded-2xl bg-emerald-50 p-2">
-                        <p className="text-lg font-black text-emerald-700">
-                          {stageCompletedPredictions}
-                        </p>
-                        <p className="text-[10px] font-bold uppercase text-slate-400">
-                          Llenos
-                        </p>
-                      </div>
-
-                      <div className="rounded-2xl bg-rose-50 p-2">
-                        <p className="text-lg font-black text-rose-600">
-                          {stagePendingMatches}
-                        </p>
-                        <p className="text-[10px] font-bold uppercase text-slate-400">
-                          Faltan
-                        </p>
-                      </div>
-                    </div>
-                  </article>
-
-                  <article className="rounded-[1.25rem] border border-emerald-100 bg-emerald-50 p-3 shadow-sm">
-                    <p className="text-[11px] font-black uppercase tracking-widest text-emerald-700">
-                      Avance de tus pronósticos
-                    </p>
-
-                    <div className="mt-2 flex items-center justify-between gap-3">
-                      <div>
-                        <h3 className="text-2xl font-black text-slate-950">
-                          {stageTotalMatches > 0
-                            ? Math.round(
-                                (stageCompletedPredictions /
-                                  stageTotalMatches) *
-                                  100
-                              )
-                            : 0}
-                          %
-                        </h3>
-
-                        <p className="text-xs font-bold text-slate-500">
-                          {stageCompletedPredictions} de {stageTotalMatches}{" "}
-                          capturados
-                        </p>
-                      </div>
-
-                      <div className="h-3 flex-1 overflow-hidden rounded-full bg-white">
-                        <div
-                          className="h-full rounded-full bg-emerald-600"
-                          style={{
-                            width: `${
-                              stageTotalMatches > 0
-                                ? Math.round(
-                                    (stageCompletedPredictions /
-                                      stageTotalMatches) *
-                                      100
-                                  )
-                                : 0
-                            }%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </article>
-                </section>
-
-                {isGroupStage && standingsGroupLabels.length > 0 && (
-                  <section className="rounded-[1.25rem] border border-slate-200 bg-white p-3 shadow-sm">
-                    <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p className="text-[11px] font-black uppercase tracking-widest text-emerald-600">
-                          Grupo seleccionado
-                        </p>
-
-                        <h3 className="text-lg font-black text-slate-950">
-                          Tabla y partidos por grupo
-                        </h3>
-                      </div>
-
-                      <div className="flex max-w-full gap-2 overflow-x-auto pb-1">
-                        {standingsGroupLabels.map((groupLabel) => {
-                          const isActive = safeActiveStandingsGroup === groupLabel;
-
-                          return (
-                            <button
-                              key={groupLabel}
-                              type="button"
-                              onClick={() => setActiveStandingsGroup(groupLabel)}
-                              className={`shrink-0 rounded-2xl px-4 py-2 text-xs font-black transition ${
-                                isActive
-                                  ? "bg-emerald-600 text-white shadow-lg shadow-emerald-100"
-                                  : "bg-slate-100 text-slate-600 hover:bg-emerald-50 hover:text-emerald-700"
-                              }`}
-                            >
-                              {groupLabel}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <GroupStandingsCard
-                      groupStandings={selectedGroupStandings}
+                <section className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-3 shadow-sm backdrop-blur">
+                  <div className="relative">
+                    <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={matchSearchTerm}
+                      onChange={(event) => setMatchSearchTerm(event.target.value)}
+                      placeholder="Buscar equipo..."
+                      className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                     />
-                  </section>
-                )}
-
-                <section className="rounded-[1.25rem] border border-slate-200 bg-white p-3 shadow-sm">
-                  <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-[11px] font-black uppercase tracking-widest text-emerald-600">
-                        Filtros rápidos
-                      </p>
-
-                      <h3 className="text-lg font-black text-slate-950">
-                        Estado de partidos
-                      </h3>
-                    </div>
-
-                    <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
-                      <Search size={16} className="text-slate-400" />
-
-                      <input
-                        type="search"
-                        value={matchSearchTerm}
-                        onChange={(event) =>
-                          setMatchSearchTerm(event.target.value)
-                        }
-                        placeholder="Buscar..."
-                        className="w-full bg-transparent text-xs font-bold text-slate-700 outline-none placeholder:text-slate-400 sm:w-52"
-                      />
-                    </div>
                   </div>
-
-                  <MatchFilters
-                    activeFilter={activeMatchFilter}
-                    onChangeFilter={setActiveMatchFilter}
-                    counts={matchFilterCounts}
-                  />
                 </section>
 
-                {isLoadingMatches && (
-                  <section className="rounded-[1.5rem] border border-slate-200 bg-white/80 p-5 text-center shadow-sm">
-                    <p className="text-sm font-black text-emerald-700">
-                      Cargando partidos de la liga...
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {filteredStageMatches.map((match) => (
+                    <MatchCard
+                      key={match.id}
+                      match={match}
+                      users={leagueAdminUsers}
+                      allPredictions={memberPredictions}
+                      onSavePrediction={handleSavePrediction}
+                    />
+                  ))}
+
+                  {filteredStageMatches.length === 0 && (
+                    <p className="col-span-full rounded-2xl border border-dashed border-slate-300 bg-white/70 p-6 text-center text-sm font-bold text-slate-400">
+                      No hay partidos que coincidan con tu búsqueda.
                     </p>
+                  )}
+                </div>
+              </div>
+            );
+          }
 
-                    <p className="mt-1 text-sm text-slate-500">
-                      Preparando la información de tu liga.
-                    </p>
-                  </section>
-                )}
+          // 1. Calculamos de forma segura los partidos de la etapa actual
+          const currentMatches = matches.filter((match) => match.stageId === activeStageId);
+          // 2. Los agrupamos de 2 en 2 para armar las llaves (Bracket)
+          const bracketPairs = [];
+          for (let i = 0; i < currentMatches.length; i += 2) {
+            bracketPairs.push([currentMatches[i], currentMatches[i + 1]]);
+          }
 
-                {!isLoadingMatches && isGroupStage ? (
-                  <section className="rounded-[1.5rem] border border-slate-200 bg-white p-3 shadow-sm">
-                    <div className="mb-3 flex flex-col gap-3 rounded-2xl bg-slate-950 px-4 py-3 text-white sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p className="text-xs font-bold uppercase tracking-widest text-emerald-300">
-                          Tus pronósticos
-                        </p>
-
-                        <h3 className="text-lg font-black">
-                          {safeActivePredictionsGroup}
-                        </h3>
-
-                        <p className="mt-1 text-xs font-bold text-slate-400">
-                          Selecciona el grupo que quieres llenar o revisar.
-                        </p>
-                      </div>
-
-                      <div className="flex w-full flex-col gap-2 sm:items-end">
-                        <div className="flex max-w-full gap-2 overflow-x-auto pb-1">
-                          {standingsGroupLabels.map((groupLabel) => {
-                            const isActive = safeActivePredictionsGroup === groupLabel;
-
-                            return (
-                              <button
-                                key={groupLabel}
-                                type="button"
-                                onClick={() => setActivePredictionsGroup(groupLabel)}
-                                className={`shrink-0 rounded-2xl px-4 py-2 text-xs font-black transition ${
-                                  isActive
-                                    ? "bg-white text-slate-950 shadow-lg shadow-black/10"
-                                    : "bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white"
-                                }`}
-                              >
-                                {groupLabel}
-                              </button>
-                            );
-                          })}
-                        </div>
-
-                        <p className="rounded-full bg-white/10 px-3 py-1 text-xs font-black">
-                          {selectedGroupMatches.length} partidos
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      {selectedGroupMatches.map((match) => (
-                        <CompactMatchCard
-                          key={match.id}
-                          match={match}
-                          onSavePrediction={handleSavePrediction}
-                          predictionsLocked={
-                            Boolean(activeLeague?.predictionsLocked) || 
-                            match.stageId === 'round-32' || 
-                            (match.stageId !== 'group-stage' && isActiveStageGloballyLocked)
-                          }
-                          canViewLeaguePredictions={
-                            Boolean(activeLeague?.predictionsLocked) || 
-                            Boolean(match.result) || 
-                            match.stageId === 'round-32' ||
-                            (match.stageId !== 'group-stage' && isActiveStageGloballyLocked)
-                          }
-                          onViewMatchPredictions={() =>
-                            handleOpenMatchPredictions(match)
-                          }
-                        />
-                      ))}
-                    </div>
-                  </section>
-                ) : (
-                  <section className="grid grid-cols-2 gap-2">
-                    {!isLoadingMatches &&
-                      filteredStageMatches.map((match) => (
-                        <CompactMatchCard
-                          key={match.id}
-                          match={match}
-                          onSavePrediction={handleSavePrediction}
-                          predictionsLocked={
-                            Boolean(activeLeague?.predictionsLocked) || 
-                            match.stageId === 'round-32' || 
-                            (match.stageId !== 'group-stage' && isActiveStageGloballyLocked)
-                          }
-                          canViewLeaguePredictions={
-                            Boolean(activeLeague?.predictionsLocked) || 
-                            Boolean(match.result) || 
-                            match.stageId === 'round-32' ||
-                            (match.stageId !== 'group-stage' && isActiveStageGloballyLocked)
-                          }
-                          onViewMatchPredictions={() =>
-                            handleOpenMatchPredictions(match)
-                          }
-                        />
-                      ))}
-                  </section>
-                )}
-
-                {!isLoadingMatches && filteredStageMatches.length === 0 && (
-                  <section className="rounded-[1.5rem] border border-dashed border-slate-300 bg-white/70 p-6 text-center">
-                    <p className="text-lg font-black text-slate-950">
-                      No hay partidos en este filtro
-                    </p>
-
-                    <p className="mt-2 text-sm leading-6 text-slate-500">
-                      Cambia el filtro o selecciona otra etapa.
-                    </p>
-                  </section>
-                )}
+          return (
+            <div className="space-y-6">
+              {/* Selector de Etapas */}
+              <section className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-3 shadow-sm backdrop-blur">
+                <StageTabs
+                  stages={stages}
+                  activeStageId={activeStageId}
+                  onChangeStage={setActiveStageId}
+                />
               </section>
-            )}
-          </>
-        )}
+
+              {/* VISTA DE LLAVES DE ELIMINATORIA (BRACKET) */}
+              <div className="w-full overflow-x-auto pb-10">
+                <div className="min-w-max pr-8">
+                  {bracketPairs.map((pair, idx) => (
+                    <BracketPair
+                      key={idx}
+                      pairIndex={idx}
+                      match1={pair[0]}
+                      match2={pair[1]}
+                      users={leagueAdminUsers}
+                      allPredictions={memberPredictions}
+                      onSavePrediction={handleSavePrediction}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {activeSection === "ranking" && (
           <>
@@ -1365,6 +1149,20 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
               />
             ) : (
               <section className="space-y-4">
+                {/* SELECTOR DE RANKING COMBINADO (16vos+8vos, 4tos+Semis, etc.) */}
+                <section className="rounded-[1.5rem] border border-slate-200 bg-white/90 p-3 shadow-sm backdrop-blur">
+                  <div className="mb-2">
+                    <p className="text-xs font-black uppercase tracking-widest text-emerald-600">
+                      Filtrar Ranking por Etapa
+                    </p>
+                  </div>
+                  <StageTabs
+                    stages={rankingStageGroups}
+                    activeStageId={activeRankingGroupId}
+                    onChangeStage={setActiveRankingGroupId}
+                  />
+                </section>
+
                 <section className="grid gap-4 lg:grid-cols-2">
                   <RankingCard
                     ranking={ranking}
@@ -1376,8 +1174,8 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                   <RankingCard
                     ranking={stageRanking}
                     currentUserName={currentUserName}
-                    title={`Ranking ${activeStage?.label}`}
-                    subtitle={activeStage?.fullName}
+                    title={`Ranking ${activeRankingGroup?.label}`}
+                    subtitle={activeRankingGroup?.fullName}
                   />
                 </section>
               </section>
@@ -1477,24 +1275,35 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
             </h2>
 
             <div className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
+              <p className="font-black text-slate-950">Fase de grupos</p>
               <p>
                 <strong className="text-slate-950">+1 punto</strong> si aciertas
                 ganador o empate.
               </p>
 
               <p>
-                <strong className="text-slate-950">+2 puntos extra</strong> si
-                aciertas marcador exacto.
+                <strong className="text-slate-950">3 puntos totales</strong> por
+                marcador exacto.
+              </p>
+
+              <p className="font-black text-slate-950">Eliminatorias (16vos en adelante)</p>
+              <p>
+                <strong className="text-slate-950">3 puntos</strong> por
+                marcador exacto en los 90 minutos.
               </p>
 
               <p>
-                <strong className="text-slate-950">3 puntos total</strong> por
-                marcador exacto.
+                <strong className="text-slate-950">+1 punto extra</strong> si
+                además aciertas qué equipo avanza (clave en los empates, donde
+                tú decides quién avanza al predecir, y el resultado oficial
+                también define quién avanzó de verdad).
               </p>
 
               <p>
                 Los pronósticos se bloquean cuando inicia el partido o cuando la
-                quiniela es cerrada por el administrador.
+                quiniela es cerrada por el administrador. Los pronósticos de
+                16vos los captura el administrador; de 8vos en adelante cada
+                participante llena los suyos.
               </p>
             </div>
           </section>
