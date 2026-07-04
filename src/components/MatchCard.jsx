@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Check, Clock, Eye, Lock, MapPin, PencilLine, Trophy, X } from "lucide-react";
-import { formatMatchDate, getLockMessage, isPredictionLocked, isKnockoutStage } from "../utils/matchUtils";
+import { formatMatchDate, isKnockoutStage } from "../utils/matchUtils";
 import { calculatePredictionPoints } from "../utils/scoreUtils";
 import { getTeamDisplayName } from "../utils/teamUtils";
 import TeamFlag from "./TeamFlag";
@@ -12,12 +12,14 @@ function getMatchStatus({ hasPrediction, hasResult, isLocked, lockMessage }) {
   return { label: "Editable", classes: "bg-emerald-50 text-emerald-700", icon: PencilLine, message: "Disponible para capturar" };
 }
 
-function MatchCard({ match, users = [], allPredictions = [], onSavePrediction, compact = false }) {
+function MatchCard({ match, users = [], allPredictions = [], onSavePrediction, compact = false, leaguePredictionsLocked = false }) {
   const knockout = isKnockoutStage(match.stageId);
   const hasPrediction = Boolean(match.userPrediction);
   const hasResult = Boolean(match.result);
-  const isLocked = match.isLocked || isPredictionLocked(match.date);
-  const lockMessage = getLockMessage(match.date);
+  const isLocked = Boolean(match.isLocked) || leaguePredictionsLocked;
+  const lockMessage = leaguePredictionsLocked
+    ? "La quiniela está cerrada"
+    : "Este partido fue bloqueado manualmente";
   const points = calculatePredictionPoints(match.userPrediction, match.result, { isKnockoutStage: knockout });
   const homeTeamName = getTeamDisplayName(match.homeTeam);
   const awayTeamName = getTeamDisplayName(match.awayTeam);

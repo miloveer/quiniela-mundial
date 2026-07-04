@@ -1118,6 +1118,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                       users={leagueAdminUsers}
                       allPredictions={memberPredictions}
                       onSavePrediction={handleSavePrediction}
+                      leaguePredictionsLocked={Boolean(activeLeague?.predictionsLocked)}
                     />
                   ))}
 
@@ -1162,6 +1163,7 @@ function DashboardMock({ user, onLogout, onUpdateUser }) {
                       users={leagueAdminUsers}
                       allPredictions={memberPredictions}
                       onSavePrediction={handleSavePrediction}
+                      leaguePredictionsLocked={Boolean(activeLeague?.predictionsLocked)}
                     />
                   ))}
                 </div>

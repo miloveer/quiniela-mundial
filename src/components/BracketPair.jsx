@@ -42,7 +42,7 @@ function WinnerSlot({ winner }) {
   );
 }
 
-function BracketPair({ match1, match2, pairIndex, users, allPredictions, onSavePrediction }) {
+function BracketPair({ match1, match2, pairIndex, users, allPredictions, onSavePrediction, leaguePredictionsLocked = false }) {
   const winner1 = getMatchWinner(match1);
   const winner2 = getMatchWinner(match2);
 
@@ -56,6 +56,7 @@ function BracketPair({ match1, match2, pairIndex, users, allPredictions, onSaveP
             users={users}
             allPredictions={allPredictions}
             onSavePrediction={onSavePrediction}
+            leaguePredictionsLocked={leaguePredictionsLocked}
             compact
           />
         )}
@@ -65,6 +66,7 @@ function BracketPair({ match1, match2, pairIndex, users, allPredictions, onSaveP
             users={users}
             allPredictions={allPredictions}
             onSavePrediction={onSavePrediction}
+            leaguePredictionsLocked={leaguePredictionsLocked}
             compact
           />
         )}
